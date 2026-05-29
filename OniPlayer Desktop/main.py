@@ -1847,9 +1847,9 @@ class OniPlayer(QMainWindow):
             media = self.instance.media_new(filename)
             print("Created new media instance")
             
-            # Parse media information to get tracks and video size (non-blocking, local only, 3s timeout)
-            media.parse_with_options(vlc.MediaParseFlag.local, timeout=3000)
-            print("Started media parsing")
+            # Parse media information to get tracks and video size
+            # media.parse()
+            # print("Started media parsing")
             
             self.media_player.set_media(media)
             print("Set media to media player")
