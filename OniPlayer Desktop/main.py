@@ -42,56 +42,13 @@ if missing_files:
         ctypes.windll.user32.MessageBoxW(0, error_msg, "Error", 0x10)
     sys.exit(1)
 
-def set_taskbar_icon(icon_path: str, app_id: str = "oniplayer.video.player.6.0", force_window: bool = False):
-    """
-    Sets the taskbar icon for Windows apps using the provided .ico file.
-    Works with GUI frameworks and CLI apps (with optional hidden window).
-    """
-    if sys.platform != "win32":
-        return  # Only relevant on Windows
+# Set AppUserModelID so Windows groups the taskbar icon correctly
+try:
+    import ctypes
+    ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("oniplayer.video.player.6.0")
+except Exception:
+    pass
 
-    if not os.path.exists(icon_path):
-        print(f"Warning: Icon file not found: {icon_path}")
-        return
-
-    try:
-        import ctypes
-        # Set AppUserModelID for taskbar icon grouping
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(app_id)
-        print(f"Taskbar App ID set successfully to: {app_id}")
-    except Exception as e:
-        print(f"Error setting taskbar App ID: {e}")
-
-    if force_window:
-        try:
-            import win32gui
-            import win32con
-            import win32api
-
-            hInstance = win32api.GetModuleHandle(None)
-            className = "HiddenWindow"
-
-            wndClass = win32gui.WNDCLASS()
-            wndClass.lpfnWndProc = win32gui.DefWindowProc
-            wndClass.hInstance = hInstance
-            wndClass.lpszClassName = className
-            wndClass.hIcon = win32gui.LoadImage(
-                hInstance, icon_path, win32con.IMAGE_ICON, 0, 0,
-                win32con.LR_LOADFROMFILE | win32con.LR_DEFAULTSIZE
-            )
-
-            atom = win32gui.RegisterClass(wndClass)
-            hwnd = win32gui.CreateWindowEx(
-                0, atom, None, 0, 0, 0, 0, 0, 0, 0, hInstance, None
-            )
-            print("CLI hidden window taskbar icon registered successfully.")
-        except ImportError:
-            print("pywin32 is required for CLI taskbar icon support. Install with: pip install pywin32")
-        except Exception as e:
-            print(f"Failed to register hidden CLI window icon: {e}")
-
-# Initialize taskbar AppUserModelID early
-set_taskbar_icon(icon_path)
 
 # Set up VLC environment
 os.environ['PATH'] = base_dir + os.pathsep + os.environ.get('PATH', '')
@@ -1848,8 +1805,8 @@ class OniPlayer(QMainWindow):
             print("Created new media instance")
             
             # Parse media information to get tracks and video size
-            # media.parse()
-            # print("Started media parsing")
+            media.parse()
+            print("Started media parsing")
             
             self.media_player.set_media(media)
             print("Set media to media player")
