@@ -1,7 +1,7 @@
 # OniPlayer
 
 <p align="center">
-  <img src="OniPlayer Android/icon.png" alt="OniPlayer Android Icon" width="140" height="140" style="border-radius: 22%; margin: 10px;" />
+  <img src="icon/icon.ico" alt="OniPlayer Android Icon" width="140" height="140" style="border-radius: 22%; margin: 10px;" />
 </p>
 <p align="center">
   <strong>OniPlayer Logo</strong>
