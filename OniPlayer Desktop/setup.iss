@@ -30,7 +30,7 @@ OutputDir=Output
 OutputBaseFilename=OniPlayer
 SetupIconFile=icon.ico
 SolidCompression=yes
-WizardStyle=modern dynamic
+WizardStyle=modern dark
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
