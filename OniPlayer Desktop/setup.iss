@@ -59,18 +59,6 @@ Filename: "{app}\{#MyAppExeName}"; Parameters: "--reset-plugins-cache"; StatusMs
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent unchecked
 Filename: "{app}\controls.txt"; Description: "View Controls"; Flags: postinstall skipifsilent unchecked shellexec
 
-[Code]
-var
-  FirstInstallMarker: string;
-
-function FirstInstall: Boolean;
-begin
-  FirstInstallMarker := ExpandConstant('{app}\firstinstall.marker');
-  Result := not FileExists(FirstInstallMarker);
-  if Result then
-    SaveStringToFile(FirstInstallMarker, '', False);
-end;
-
 [Registry]
 ; Register application capabilities
 Root: HKLM; Subkey: "Software\OniPlayer\Capabilities"; ValueType: string; ValueName: "ApplicationDescription"; ValueData: "Modern Video Player with Dark Theme"; Flags: uninsdeletekey

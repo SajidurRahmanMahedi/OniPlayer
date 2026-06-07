@@ -107,7 +107,7 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
 ### 1. Compile to Executable (`PyInstaller`)
 To bundle the application into a single standalone binary folder on Windows:
 ```powershell
-pyinstaller --noconfirm --onedir --windowed --icon "icon.ico" --name "OniPlayer" --version-file "file_version_info.txt" "main.py"
+pyinstaller --noconfirm --onedir --windowed --icon "icon.ico" --name "OniPlayer" --version-file "file_version_info.txt" main.py
 ```
 
 ### 2. Create Installer (`Inno Setup`)
