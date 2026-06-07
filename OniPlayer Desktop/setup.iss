@@ -132,3 +132,5 @@ Root: HKLM; Subkey: "Software\Classes\OniPlayer.flv\shell\open\command"; ValueTy
 Root: HKLM; Subkey: "Software\Classes\.flv\OpenWithProgids"; ValueType: none; ValueName: "OniPlayer.flv"
 Root: HKLM; Subkey: "Software\OniPlayer\Capabilities\FileAssociations"; ValueType: string; ValueName: ".flv"; ValueData: "OniPlayer.flv"
 
+[UninstallDelete]
+Type: filesandordirs; Name: "{app}"
