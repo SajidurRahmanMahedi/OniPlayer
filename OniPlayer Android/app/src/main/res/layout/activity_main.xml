@@ -115,40 +115,47 @@
         android:visibility="gone">
 
         <ImageView
-            android:layout_width="80dp"
-            android:layout_height="80dp"
-            android:src="@android:drawable/ic_dialog_alert"
-            android:tint="@color/text_secondary"
-            android:layout_marginBottom="16dp" />
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:src="@drawable/ic_permission"
+            android:layout_marginBottom="24dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Permission Required"
             android:textColor="@color/text_primary"
-            android:textSize="20sp"
+            android:textSize="24sp"
             android:textStyle="bold"
-            android:layout_marginBottom="8dp" />
+            android:fontFamily="sans-serif-medium"
+            android:layout_marginBottom="12dp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="This app needs access to your videos and files to play and delete them.\nPlease grant all required permissions to continue."
             android:textColor="@color/text_secondary"
-            android:textSize="14sp"
+            android:textSize="15sp"
             android:gravity="center"
-            android:lineSpacingExtra="4dp"
-            android:layout_marginBottom="24dp" />
+            android:lineSpacingExtra="6dp"
+            android:layout_marginBottom="32dp" />
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/btnGrantPermission"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
+            android:layout_height="56dp"
             android:text="Grant Permission"
-            android:textColor="@android:color/white"
-            android:background="@color/dark_surface_alt"
-            android:padding="12dp"
-            android:textSize="16sp" />
+            android:textColor="@color/text_primary"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:paddingStart="32dp"
+            android:paddingEnd="32dp"
+            app:backgroundTint="@color/dark_surface_alt"
+            app:strokeColor="@color/text_secondary"
+            app:strokeWidth="1dp"
+            app:cornerRadius="12dp"
+            app:rippleColor="#30FFFFFF"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton" />
 
     </LinearLayout>
 
