@@ -34,6 +34,27 @@ import java.io.File
 import java.util.Locale
 
 class MainActivity : AppCompatActivity() {
+
+    // ── Natural (alphanumeric) sort comparator ─────────────────────────────
+    // Splits strings into alternating text/number chunks so that
+    // "ch-2" < "ch-10" < "ch-100" instead of lexicographic "ch-10" < "ch-100" < "ch-2".
+    private val naturalSortComparator: Comparator<String> = Comparator { a, b ->
+        val re = Regex("(\\d+|\\D+)")
+        val chunksA = re.findAll(a).map { it.value }.toList()
+        val chunksB = re.findAll(b).map { it.value }.toList()
+        val len = minOf(chunksA.size, chunksB.size)
+        for (i in 0 until len) {
+            val ca = chunksA[i]
+            val cb = chunksB[i]
+            val cmp = if (ca[0].isDigit() && cb[0].isDigit()) {
+                ca.toLongOrNull()?.compareTo(cb.toLongOrNull() ?: 0L) ?: ca.compareTo(cb)
+            } else {
+                ca.lowercase().compareTo(cb.lowercase())
+            }
+            if (cmp != 0) return@Comparator cmp
+        }
+        chunksA.size - chunksB.size
+    }
     companion object {
         private val SUBTITLE_EXTENSIONS = setOf(
             "srt", "ass", "ssa", "vtt", "sub", "smi", "ttml", "dfxp"
@@ -594,18 +615,19 @@ class MainActivity : AppCompatActivity() {
                     FolderItem(
                         name   = displayName,
                         path   = folderPath,
-                        videos = videos.sortedBy { it.title.lowercase() }
+                        videos = videos.sortedWith(Comparator { a, b -> naturalSortComparator.compare(a.title, b.title) })
                     )
                 } else null
             }
             .filterNotNull()
-            .sortedBy { folder ->
-                // Put Internal Storage first, then sort alphabetically
-                when (folder.name) {
-                    "Internal Storage" -> ""
-                    else -> folder.name.lowercase()
+            .sortedWith(Comparator { a, b ->
+                // Put Internal Storage first, then natural sort
+                when {
+                    a.name == "Internal Storage" -> -1
+                    b.name == "Internal Storage" -> 1
+                    else -> naturalSortComparator.compare(a.name, b.name)
                 }
-            }
+            })
             
             android.util.Log.d("OniPlayer", "Final folder list size: ${folders.size}")
             folders.forEach { folder ->
