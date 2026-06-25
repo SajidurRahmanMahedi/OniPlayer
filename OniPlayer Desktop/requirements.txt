@@ -1,5 +1,7 @@
 # Core Dependencies
 PyQt6==6.8.0
+PyQt6-Qt6==6.8.2
+PyQt6_sip==13.11.1
 python-vlc==3.0.21203
 
 # PyInstaller and Dependencies
