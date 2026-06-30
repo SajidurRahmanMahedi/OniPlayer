@@ -159,6 +159,10 @@ class MainActivity : AppCompatActivity() {
     // Scroll position memory for video lists
     private var savedVideoListScrollPosition: Int = 0
 
+    // Refresh state tracking
+    private var isRefreshing = false
+    private var refreshCallbackRunnable: Runnable? = null
+
     // ── State ──────────────────────────────────────────────────────────────
     private enum class Screen { FOLDERS, VIDEOS, PLAYER }
     private var currentScreen = Screen.FOLDERS
@@ -350,6 +354,9 @@ class MainActivity : AppCompatActivity() {
             // Back-press navigation: PLAYER → VIDEOS → FOLDERS → system
             onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
                 override fun handleOnBackPressed() {
+                    // Cancel refresh if in progress
+                    cancelRefresh()
+                    
                     if (isMultiSelectMode) {
                         exitMultiSelectMode()
                     } else {
@@ -734,6 +741,11 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun refreshVideoLibrary() {
+        // Cancel any existing refresh
+        cancelRefresh()
+        
+        isRefreshing = true
+        
         // Store current state to restore after refresh
         val wasInFolder = currentScreen == Screen.VIDEOS
         val savedFolderPath = currentFolderPath
@@ -758,11 +770,19 @@ class MainActivity : AppCompatActivity() {
         // Reload videos without showing folder list
         loadVideosWithoutShowingList()
         
-        // Restore previous state after loading completes
-        handler.postDelayed({
+        // Create and store the callback runnable so it can be cancelled
+        refreshCallbackRunnable = Runnable {
+            // Only proceed if still refreshing (not cancelled by user navigation)
+            if (!isRefreshing) {
+                android.util.Log.d("OniPlayer", "Refresh was cancelled, skipping state restoration")
+                return@Runnable
+            }
+            
             // Hide refresh indicators
             folderSwipeRefresh.isRefreshing = false
             videoSwipeRefresh.isRefreshing = false
+            isRefreshing = false
+            refreshCallbackRunnable = null
             
             if (currentScreen == Screen.PLAYER) {
                 // If the user has started playing a video, update the background list/adapters 
@@ -810,7 +830,27 @@ class MainActivity : AppCompatActivity() {
                     showFolderList()
                 }
             }
-        }, 1000)
+        }
+        
+        // Post the delayed callback
+        handler.postDelayed(refreshCallbackRunnable!!, 1000)
+    }
+    
+    private fun cancelRefresh() {
+        if (isRefreshing) {
+            android.util.Log.d("OniPlayer", "Cancelling refresh due to user navigation")
+            isRefreshing = false
+            
+            // Remove the pending callback if it exists
+            refreshCallbackRunnable?.let {
+                handler.removeCallbacks(it)
+                refreshCallbackRunnable = null
+            }
+            
+            // Hide refresh indicators
+            folderSwipeRefresh.isRefreshing = false
+            videoSwipeRefresh.isRefreshing = false
+        }
     }
 
     // ── Multi-select Setup ─────────────────────────────────────────────────
@@ -1791,6 +1831,9 @@ class MainActivity : AppCompatActivity() {
             folderRecyclerView.adapter = FolderAdapter(
                 folders = folders,
                 onFolderClick = { folder ->
+                    // Cancel refresh if in progress
+                    cancelRefresh()
+                    
                     if (!isMultiSelectMode) {
                         showVideoListForFolder(folder)
                     }
@@ -1900,6 +1943,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onSupportNavigateUp(): Boolean {
+        // Cancel refresh if in progress
+        cancelRefresh()
+        
         return when (currentScreen) {
             Screen.VIDEOS -> {
                 showFolderList()
