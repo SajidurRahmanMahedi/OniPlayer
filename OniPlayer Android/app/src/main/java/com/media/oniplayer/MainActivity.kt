@@ -184,6 +184,8 @@ class MainActivity : AppCompatActivity() {
     private var seekStartTime = -1L
     private var pendingSubtitleTrackId: Int? = null
     private var pendingSubtitleTrackName: String? = null
+    private var pendingAudioTrackId: Int? = null
+    private var pendingAudioTrackName: String? = null
     private var currentZoomScale = 1f
     private val minZoomScale = 0.5f
     private val maxZoomScale = 1f
@@ -1103,6 +1105,11 @@ class MainActivity : AppCompatActivity() {
                     wasPlayingBeforeOpen = wasPlaying
                 ) { id ->
                     player.audioTrack = id
+                    val currentVideo = if (currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) currentPlaylist[currentPlayingIndex] else null
+                    currentVideo?.let { video ->
+                        val selectedTrackName = player.audioTracks?.firstOrNull { it.id == id }?.name
+                        saveVideoAudioTrack(video.path, id, selectedTrackName)
+                    }
                 }
             }
         }
@@ -1120,6 +1127,10 @@ class MainActivity : AppCompatActivity() {
                 ) { id ->
                     val selectedTrackName = player.spuTracks?.firstOrNull { it.id == id }?.name
                     selectSubtitleTrackVlcStyle(id, selectedTrackName)
+                    val currentVideo = if (currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) currentPlaylist[currentPlayingIndex] else null
+                    currentVideo?.let { video ->
+                        saveVideoSubtitleTrack(video.path, id, selectedTrackName)
+                    }
                 }
             }
         }
@@ -1379,6 +1390,10 @@ class MainActivity : AppCompatActivity() {
                 override fun onScaleEnd(detector: android.view.ScaleGestureDetector) {
                     super.onScaleEnd(detector)
                     isGesturing = false
+                    val currentVideo = if (currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) currentPlaylist[currentPlayingIndex] else null
+                    currentVideo?.let { video ->
+                        saveVideoZoomScale(video.path, currentZoomScale)
+                    }
                     handler.postDelayed(hideGestureOverlayRunnable, 350)
                 }
             }
@@ -1670,6 +1685,7 @@ class MainActivity : AppCompatActivity() {
                     requestedName = selectedTrackName,
                     onComplete = resumePlayback
                 )
+                onSelected(selectedId)
             } else {
                 onSelected(selectedId)
                 if (wasPlayingBeforeOpen && mediaPlayer === player) {
@@ -1961,6 +1977,29 @@ class MainActivity : AppCompatActivity() {
             // Load saved volume for this specific video
             currentVolume = getVideoVolume(video.path)
             
+            // Load saved zoom scale for this specific video
+            currentZoomScale = getVideoZoomScale(video.path)
+            
+            // Load saved subtitle track for this specific video
+            val savedSpuId = sharedPrefs.getInt("subtitle_track_id_${video.path}", -999)
+            if (savedSpuId != -999) {
+                pendingSubtitleTrackId = savedSpuId
+                pendingSubtitleTrackName = sharedPrefs.getString("subtitle_track_name_${video.path}", null)
+            } else {
+                pendingSubtitleTrackId = null
+                pendingSubtitleTrackName = null
+            }
+            
+            // Load saved audio track for this specific video
+            val savedAudioId = sharedPrefs.getInt("audio_track_id_${video.path}", -999)
+            if (savedAudioId != -999) {
+                pendingAudioTrackId = savedAudioId
+                pendingAudioTrackName = sharedPrefs.getString("audio_track_name_${video.path}", null)
+            } else {
+                pendingAudioTrackId = null
+                pendingAudioTrackName = null
+            }
+            
             // Reset completion flag for new video
             videoMarkedAsCompleted = false
             
@@ -1987,7 +2026,6 @@ class MainActivity : AppCompatActivity() {
             mediaPlayer?.let { player ->
                 player.volume = (currentVolume * 256 / 100)
             }
-            currentZoomScale = 1f
             applyVideoZoom()
             updateZoomIndicator()
 
@@ -2013,7 +2051,11 @@ class MainActivity : AppCompatActivity() {
                         MediaPlayer.Event.Playing -> {
                             videoStarted = true // Mark video as started to cancel timeout
                             btnPlayPause.setImageResource(R.drawable.ic_pause)
-                            tryApplyPendingSubtitleTrack(activePlayer)
+                            val spuId = pendingSubtitleTrackId
+                            if (spuId != null) {
+                                applySubtitleTrackReliably(activePlayer, spuId, pendingSubtitleTrackName)
+                            }
+                            tryApplyPendingAudioTrack(activePlayer)
                             resetControlsHideTimer()
                             
                             // Seek to the saved position as soon as playback begins
@@ -2039,7 +2081,7 @@ class MainActivity : AppCompatActivity() {
                         MediaPlayer.Event.ESAdded -> {
                             // VLC discovered a new elementary stream (audio/video/subtitle).
                             // Apply pending subtitle again when subtitle streams become available.
-                            tryApplyPendingSubtitleTrack(activePlayer)
+                            tryApplyPendingAudioTrack(activePlayer)
                         }
                         MediaPlayer.Event.TimeChanged -> {
                             val length = activePlayer.length
@@ -2279,6 +2321,54 @@ class MainActivity : AppCompatActivity() {
     private fun getVideoVolume(path: String): Int {
         return sharedPrefs.getInt("volume_$path", -1).let { saved ->
             if (saved != -1) saved else sharedPrefs.getInt("saved_volume", systemVolume)
+        }
+    }
+
+    private fun saveVideoAudioTrack(path: String, trackId: Int, trackName: String?) {
+        sharedPrefs.edit()
+            .putInt("audio_track_id_$path", trackId)
+            .putString("audio_track_name_$path", trackName)
+            .apply()
+        android.util.Log.d("OniPlayer", "Saved audio track for $path: id=$trackId, name=$trackName")
+    }
+
+    private fun saveVideoSubtitleTrack(path: String, trackId: Int, trackName: String?) {
+        sharedPrefs.edit()
+            .putInt("subtitle_track_id_$path", trackId)
+            .putString("subtitle_track_name_$path", trackName)
+            .apply()
+        android.util.Log.d("OniPlayer", "Saved subtitle track for $path: id=$trackId, name=$trackName")
+    }
+
+    private fun saveVideoZoomScale(path: String, scale: Float) {
+        sharedPrefs.edit().putFloat("zoom_scale_$path", scale).apply()
+        android.util.Log.d("OniPlayer", "Saved zoom scale for $path: $scale")
+    }
+
+    private fun getVideoZoomScale(path: String): Float {
+        val scale = sharedPrefs.getFloat("zoom_scale_$path", 1.0f)
+        android.util.Log.d("OniPlayer", "Loaded zoom scale for $path: $scale")
+        return scale
+    }
+
+    private fun resolveAudioTrackId(player: MediaPlayer, requestedId: Int, requestedName: String?): Int {
+        val tracks = player.audioTracks ?: return requestedId
+        if (tracks.any { it.id == requestedId }) return requestedId
+        if (!requestedName.isNullOrBlank()) {
+            tracks.firstOrNull { it.name == requestedName }?.let { return it.id }
+        }
+        return requestedId
+    }
+
+    private fun tryApplyPendingAudioTrack(player: MediaPlayer) {
+        val requestedId = pendingAudioTrackId ?: return
+        val requestedName = pendingAudioTrackName
+        val resolvedId = resolveAudioTrackId(player, requestedId, requestedName)
+        player.audioTrack = resolvedId
+        if (player.audioTrack == resolvedId) {
+            pendingAudioTrackId = null
+            pendingAudioTrackName = null
+            android.util.Log.d("OniPlayer", "Successfully applied pending audio track: $resolvedId")
         }
     }
 
