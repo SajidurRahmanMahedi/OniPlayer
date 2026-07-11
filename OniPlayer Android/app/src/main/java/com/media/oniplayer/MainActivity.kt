@@ -193,6 +193,8 @@ class MainActivity : AppCompatActivity() {
     private var currentZoomScale = 1f
     private val minZoomScale = 0.5f
     private val maxZoomScale = 1f
+    private var currentTranslationX = 0f
+    private var currentTranslationY = 0f
     private var blockSingleFingerGesturesUntilRelease = false
     private var videoMarkedAsCompleted = false
     private var pendingSavedProgress = 0L
@@ -204,7 +206,7 @@ class MainActivity : AppCompatActivity() {
     private var currentVideoPosition: Long = 0L
     private var isInBackground = false
     
-    private enum class GestureType { BRIGHTNESS, VOLUME, SEEK }
+    private enum class GestureType { BRIGHTNESS, VOLUME, SEEK, PAN }
 
     // ── Permission launchers ────────────────────────────────────────────────
     private val requestPermissionLauncher = registerForActivityResult(
@@ -1325,9 +1327,12 @@ class MainActivity : AppCompatActivity() {
                 gestureOverlay.visibility = android.view.View.VISIBLE
                 gestureOverlay.alpha = 1f
                 
-                // Determine gesture type based on direction
+                // Determine gesture type based on direction and zoom state
                 if (gestureType == null) {
-                    if (kotlin.math.abs(distanceX) > kotlin.math.abs(distanceY)) {
+                    if (currentZoomScale > 1f) {
+                        // When zoomed in, allow pan gestures
+                        gestureType = GestureType.PAN
+                    } else if (kotlin.math.abs(distanceX) > kotlin.math.abs(distanceY)) {
                         // Horizontal swipe - seek
                         gestureType = GestureType.SEEK
                     } else {
@@ -1353,6 +1358,12 @@ class MainActivity : AppCompatActivity() {
                         currentVolume = (currentVolume + volDelta).coerceIn(0, 100)
                         setVolume(currentVolume)
                         updateVolumeIndicator()
+                    }
+                    GestureType.PAN -> {
+                        // Allow panning when zoomed in
+                        currentTranslationX -= distanceX
+                        currentTranslationY -= distanceY
+                        applyVideoZoom()
                     }
                     GestureType.SEEK -> {
                         seekIndicator.visibility = android.view.View.VISIBLE
@@ -1518,6 +1529,14 @@ class MainActivity : AppCompatActivity() {
                 topControlsContainer.visibility = android.view.View.VISIBLE
             }
             
+            // Save translation when pan gesture ends
+            if (gestureType == GestureType.PAN) {
+                val currentVideo = if (currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) currentPlaylist[currentPlayingIndex] else null
+                currentVideo?.let { video ->
+                    saveVideoTranslation(video.path, currentTranslationX, currentTranslationY)
+                }
+            }
+            
             gestureType = null
             seekDelta = 0L
             seekStartTime = -1L
@@ -1575,10 +1594,31 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun applyVideoZoom() {
-        vlcVideoLayout.pivotX = vlcVideoLayout.width / 2f
-        vlcVideoLayout.pivotY = vlcVideoLayout.height / 2f
-        vlcVideoLayout.scaleX = currentZoomScale
-        vlcVideoLayout.scaleY = currentZoomScale
+        // Ensure the view is laid out before applying zoom
+        if (vlcVideoLayout.width > 0 && vlcVideoLayout.height > 0) {
+            vlcVideoLayout.pivotX = vlcVideoLayout.width / 2f
+            vlcVideoLayout.pivotY = vlcVideoLayout.height / 2f
+            vlcVideoLayout.scaleX = currentZoomScale
+            vlcVideoLayout.scaleY = currentZoomScale
+            // Apply saved translation
+            vlcVideoLayout.translationX = currentTranslationX
+            vlcVideoLayout.translationY = currentTranslationY
+        } else {
+            // Wait for layout if dimensions are not ready
+            vlcVideoLayout.viewTreeObserver.addOnGlobalLayoutListener(object : android.view.ViewTreeObserver.OnGlobalLayoutListener {
+                override fun onGlobalLayout() {
+                    if (vlcVideoLayout.width > 0 && vlcVideoLayout.height > 0) {
+                        vlcVideoLayout.viewTreeObserver.removeOnGlobalLayoutListener(this)
+                        vlcVideoLayout.pivotX = vlcVideoLayout.width / 2f
+                        vlcVideoLayout.pivotY = vlcVideoLayout.height / 2f
+                        vlcVideoLayout.scaleX = currentZoomScale
+                        vlcVideoLayout.scaleY = currentZoomScale
+                        vlcVideoLayout.translationX = currentTranslationX
+                        vlcVideoLayout.translationY = currentTranslationY
+                    }
+                }
+            })
+        }
     }
 
     private fun updateZoomIndicator() {
@@ -2026,6 +2066,11 @@ class MainActivity : AppCompatActivity() {
             // Load saved zoom scale for this specific video
             currentZoomScale = getVideoZoomScale(video.path)
             
+            // Load saved translation for this specific video
+            val (savedTranslationX, savedTranslationY) = getVideoTranslation(video.path)
+            currentTranslationX = savedTranslationX
+            currentTranslationY = savedTranslationY
+            
             // Load saved subtitle track for this specific video
             val savedSpuId = sharedPrefs.getInt("subtitle_track_id_${video.path}", -999)
             if (savedSpuId != -999) {
@@ -2072,7 +2117,10 @@ class MainActivity : AppCompatActivity() {
             mediaPlayer?.let { player ->
                 player.volume = (currentVolume * 256 / 100)
             }
-            applyVideoZoom()
+            // Apply zoom after layout is ready
+            vlcVideoLayout.post {
+                applyVideoZoom()
+            }
             updateZoomIndicator()
 
             // Add timeout to detect if video fails to start playing (corrupted/unsupported files)
@@ -2103,6 +2151,11 @@ class MainActivity : AppCompatActivity() {
                             }
                             tryApplyPendingAudioTrack(activePlayer)
                             resetControlsHideTimer()
+                            
+                            // Re-apply zoom and translation after a short delay to ensure VLC has finished setting up the surface
+                            handler.postDelayed({
+                                applyVideoZoom()
+                            }, 100)
                             
                             // Seek to the saved position as soon as playback begins
                             if (pendingSavedProgress > 0) {
@@ -2397,6 +2450,21 @@ class MainActivity : AppCompatActivity() {
         return scale
     }
 
+    private fun saveVideoTranslation(path: String, translationX: Float, translationY: Float) {
+        sharedPrefs.edit()
+            .putFloat("translation_x_$path", translationX)
+            .putFloat("translation_y_$path", translationY)
+            .apply()
+        android.util.Log.d("OniPlayer", "Saved translation for $path: x=$translationX, y=$translationY")
+    }
+
+    private fun getVideoTranslation(path: String): Pair<Float, Float> {
+        val translationX = sharedPrefs.getFloat("translation_x_$path", 0f)
+        val translationY = sharedPrefs.getFloat("translation_y_$path", 0f)
+        android.util.Log.d("OniPlayer", "Loaded translation for $path: x=$translationX, y=$translationY")
+        return Pair(translationX, translationY)
+    }
+
     private fun resolveAudioTrackId(player: MediaPlayer, requestedId: Int, requestedName: String?): Int {
         val tracks = player.audioTracks ?: return requestedId
         if (tracks.any { it.id == requestedId }) return requestedId
@@ -2492,6 +2560,11 @@ class MainActivity : AppCompatActivity() {
             val player = mediaPlayer ?: return
             val videoPath = currentVideoPath ?: return
             
+            // Reload saved translation for the current video
+            val (savedTranslationX, savedTranslationY) = getVideoTranslation(videoPath)
+            currentTranslationX = savedTranslationX
+            currentTranslationY = savedTranslationY
+            
             // Detach views first to ensure clean state
             player.detachViews()
             
@@ -2501,6 +2574,9 @@ class MainActivity : AppCompatActivity() {
             // Wait a moment for surface to be ready, then restore position and playback
             handler.postDelayed({
                 try {
+                    // Apply saved zoom and translation
+                    applyVideoZoom()
+                    
                     // Restore position
                     if (currentVideoPosition > 0) {
                         player.time = currentVideoPosition
