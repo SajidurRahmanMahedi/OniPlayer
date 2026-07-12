@@ -2308,6 +2308,7 @@ class MainActivity : AppCompatActivity() {
                 val pathToSave = currentVideoPath
                 if (!pathToSave.isNullOrEmpty()) {
                     saveVideoProgress(pathToSave, player.time)
+                    saveVideoTranslation(pathToSave, currentTranslationX, currentTranslationY)
                 }
                 player.stop()
                 player.detachViews()
@@ -2324,6 +2325,9 @@ class MainActivity : AppCompatActivity() {
             currentVideoPath = null
             currentVideoPosition = 0L
             wasPlayingBeforeBackground = false
+            // Reset translation for next video
+            currentTranslationX = 0f
+            currentTranslationY = 0f
         } catch (e: Exception) {
             e.printStackTrace()
         }
