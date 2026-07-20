@@ -46,7 +46,7 @@ class VideoAdapter(
         val progress = sharedPrefs.getLong("progress_${video.path}", 0L)
         if (progress > 0 && video.duration > 0) {
             val percentage = (progress * 100 / video.duration).toInt()
-            if (percentage >= 95) {
+            if (percentage >= 100) {
                 holder.watchedBadge.visibility = View.VISIBLE
                 holder.progressBar.visibility = View.GONE
             } else {

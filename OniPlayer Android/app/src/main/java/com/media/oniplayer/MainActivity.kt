@@ -386,10 +386,85 @@ class MainActivity : AppCompatActivity() {
             setupMultiSelect()
             checkPermissionAndLoadVideos()
 
+            // Handle intent from "Open with" menu
+            handleIntent(intent)
+
         } catch (e: Exception) {
             e.printStackTrace()
             android.util.Log.e("OniPlayer", "Crash in onCreate: ${e.message}", e)
             Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    private fun handleIntent(intent: Intent) {
+        val action = intent.action
+        val data = intent.data
+
+        if (action == Intent.ACTION_VIEW && data != null) {
+            android.util.Log.d("OniPlayer", "Received VIEW intent: $data")
+            
+            // Convert URI to file path
+            val filePath = getPathFromUri(data)
+            if (filePath != null) {
+                android.util.Log.d("OniPlayer", "File path: $filePath")
+                
+                // Wait for videos to load, then play the requested video
+                handler.postDelayed({
+                    playVideoFromPath(filePath)
+                }, 1000)
+            } else {
+                Toast.makeText(this, "Unable to open video file", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    private fun getPathFromUri(uri: Uri): String? {
+        return when (uri.scheme) {
+            "file" -> uri.path
+            "content" -> {
+                val projection = arrayOf(android.provider.MediaStore.Video.Media.DATA)
+                val cursor = contentResolver.query(uri, projection, null, null, null)
+                cursor?.use {
+                    val columnIndex = it.getColumnIndexOrThrow(android.provider.MediaStore.Video.Media.DATA)
+                    if (it.moveToFirst()) {
+                        it.getString(columnIndex)
+                    } else null
+                }
+            }
+            else -> null
+        }
+    }
+
+    private fun playVideoFromPath(filePath: String) {
+        val video = allVideos.find { it.path == filePath }
+        if (video != null) {
+            android.util.Log.d("OniPlayer", "Found video: ${video.title}")
+            
+            // Find the folder containing this video
+            val videoFile = File(video.path)
+            val parentPath = videoFile.parent ?: return
+            val folder = folders.find { it.path == parentPath }
+            
+            if (folder != null) {
+                currentPlayingIndex = folder.videos.indexOfFirst { it.path == video.path }
+                
+                showVideoListForFolder(folder)
+                
+                handler.postDelayed({
+                    if (currentPlayingIndex >= 0 && currentPlayingIndex < currentPlaylist.size) {
+                        playVideo(currentPlaylist[currentPlayingIndex])
+                    }
+                }, 500)
+            } else {
+                Toast.makeText(this, "Video not found in library", Toast.LENGTH_LONG).show()
+            }
+        } else {
+            Toast.makeText(this, "Video not found in library", Toast.LENGTH_LONG).show()
         }
     }
 
@@ -2097,8 +2172,8 @@ class MainActivity : AppCompatActivity() {
             // Restore saved progress so the player can seek to it once playback starts
             val actualSavedProgress = getVideoProgress(video.path)
             pendingVideoDuration = video.duration
-            // If the video was watched to within 5 s of the end treat it as completed and restart
-            val nearEnd = pendingVideoDuration > 0 && actualSavedProgress >= pendingVideoDuration - 5000
+            // If the video was watched to 100%, treat it as completed and restart
+            val nearEnd = pendingVideoDuration > 0 && actualSavedProgress >= pendingVideoDuration
             pendingSavedProgress = if (nearEnd) 0L else actualSavedProgress
             android.util.Log.d("OniPlayer", "Video start: saved=${formatTime(actualSavedProgress)}, resuming from=${formatTime(pendingSavedProgress)}")
 
@@ -2371,7 +2446,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun updateContinueFromPositionButton(videoPath: String, videoDuration: Long) {
         val savedProgress = getVideoProgress(videoPath)
-        if (savedProgress > 0 && savedProgress < videoDuration - 5000) {
+        if (savedProgress > 0 && savedProgress < videoDuration) {
             btnContinueFromPosition.visibility = android.view.View.GONE
         } else {
             btnContinueFromPosition.visibility = android.view.View.GONE
