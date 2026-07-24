@@ -2220,6 +2220,8 @@ class MainActivity : AppCompatActivity() {
                         MediaPlayer.Event.Playing -> {
                             videoStarted = true // Mark video as started to cancel timeout
                             btnPlayPause.setImageResource(R.drawable.ic_pause)
+                            // Keep the screen on while video is actively playing
+                            window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                             val spuId = pendingSubtitleTrackId
                             if (spuId != null) {
                                 applySubtitleTrackReliably(activePlayer, spuId, pendingSubtitleTrackName)
@@ -2278,6 +2280,8 @@ class MainActivity : AppCompatActivity() {
                             }
                         }
                         MediaPlayer.Event.EndReached -> {
+                            // Allow screen to turn off once playback ends
+                            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                             // Save progress when video naturally ends
                             if (!videoMarkedAsCompleted && currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
                                 val currentVideo = currentPlaylist[currentPlayingIndex]
@@ -2288,6 +2292,8 @@ class MainActivity : AppCompatActivity() {
                         MediaPlayer.Event.EncounteredError -> {
                             // Handle VLC playback errors
                             android.util.Log.e("OniPlayer", "VLC encountered error playing video: ${video.path}")
+                            // Allow screen to turn off on error
+                            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                             runOnUiThread {
                                 Toast.makeText(this@MainActivity, "Error playing video: ${video.title}", Toast.LENGTH_LONG).show()
                                 stopVideo()
@@ -2367,6 +2373,8 @@ class MainActivity : AppCompatActivity() {
             if (::btnLockScreen.isInitialized) {
                 btnLockScreen.visibility = android.view.View.GONE
             }
+            // Allow screen to turn off once video is stopped
+            window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             resetToSystemBrightness()
             // Restore system volume if we are actually exiting the player screen
             if (currentScreen != Screen.PLAYER) {
