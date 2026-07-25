@@ -2172,10 +2172,18 @@ class MainActivity : AppCompatActivity() {
             // Restore saved progress so the player can seek to it once playback starts
             val actualSavedProgress = getVideoProgress(video.path)
             pendingVideoDuration = video.duration
-            // If the video was watched to 100%, treat it as completed and restart
-            val nearEnd = pendingVideoDuration > 0 && actualSavedProgress >= pendingVideoDuration
-            pendingSavedProgress = if (nearEnd) 0L else actualSavedProgress
-            android.util.Log.d("OniPlayer", "Video start: saved=${formatTime(actualSavedProgress)}, resuming from=${formatTime(pendingSavedProgress)}")
+            // COMPLETED_SENTINEL (Long.MAX_VALUE) means the video was watched fully —
+            // seek back to the start so VLC doesn't linger at the end position and
+            // immediately fire EndReached again when the player starts.
+            val wasCompleted = actualSavedProgress == Long.MAX_VALUE
+            val nearEnd = !wasCompleted && pendingVideoDuration > 0 && actualSavedProgress >= pendingVideoDuration
+            // When the video is fully watched we must EXPLICITLY seek to 0; we store -1
+            // as the sentinel so the Playing handler always performs the seek.
+            pendingSavedProgress = when {
+                wasCompleted || nearEnd -> -1L  // -1 = "seek to start"
+                else -> actualSavedProgress
+            }
+            android.util.Log.d("OniPlayer", "Video start: saved=${formatTime(actualSavedProgress)}, resuming from=${formatTime(pendingSavedProgress)} wasCompleted=$wasCompleted")
 
             // Show/hide continue from position button based on saved progress
             updateContinueFromPositionButton(video.path, video.duration)
@@ -2234,8 +2242,24 @@ class MainActivity : AppCompatActivity() {
                                 applyVideoZoom()
                             }, 100)
                             
-                            // Seek to the saved position as soon as playback begins
-                            if (pendingSavedProgress > 0) {
+                            // Seek to the saved position as soon as playback begins.
+                            // pendingSavedProgress == -1L means "restart from the beginning"
+                            // (video was previously completed), so we explicitly seek to 0
+                            // to prevent VLC from staying at its last position and immediately
+                            // re-firing EndReached.
+                            if (pendingSavedProgress == -1L) {
+                                android.util.Log.d("OniPlayer", "Restarting completed video from position 0")
+                                activePlayer.time = 0L
+                                pendingSavedProgress = 0L
+                                // IMPORTANT: clear the Long.MAX_VALUE "watched" sentinel now that
+                                // the user has chosen to rewatch. From this point on, progress
+                                // saves must work normally so the rewatch position is preserved.
+                                // The watched badge will return once they finish watching again.
+                                val rewatchPath = currentPlaylist.getOrNull(currentPlayingIndex)?.path
+                                if (!rewatchPath.isNullOrEmpty()) {
+                                    sharedPrefs.edit().remove("progress_$rewatchPath").apply()
+                                }
+                            } else if (pendingSavedProgress > 0) {
                                 android.util.Log.d("OniPlayer", "Resuming from: ${formatTime(pendingSavedProgress)}")
                                 activePlayer.time = pendingSavedProgress
                                 pendingSavedProgress = 0L // clear so it doesn't fire again
@@ -2245,9 +2269,8 @@ class MainActivity : AppCompatActivity() {
                             btnPlayPause.setImageResource(R.drawable.ic_play)
                             handler.removeCallbacks(hideControlsRunnable)
                             
-                            // Don't save progress when pausing
-                            // Save progress when switching videos
-                            if (currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
+                            // Save progress on pause, but never overwrite the "watched" sentinel
+                            if (!videoMarkedAsCompleted && currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
                                 val currentVideo = currentPlaylist[currentPlayingIndex]
                                 mediaPlayer?.let { player ->
                                     saveVideoProgress(currentVideo.path, player.time)
@@ -2264,17 +2287,17 @@ class MainActivity : AppCompatActivity() {
                             val time = activePlayer.time
                             updateTimelineUi(time, length)
                             
-                            // Save progress periodically during playback
-                            if (time % 5000 < 100 && currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
+                            // Save progress periodically, but never after the video is marked watched
+                            if (!videoMarkedAsCompleted && time % 5000 < 100 && currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
                                 val currentVideo = currentPlaylist[currentPlayingIndex]
                                 saveVideoProgress(currentVideo.path, time)
                             }
                             
-                            // Save progress as completed when video reaches 100%
+                            // Mark as watched when video reaches 100%
                             if (!videoMarkedAsCompleted && length > 0 && time >= length) {
                                 if (currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
                                     val currentVideo = currentPlaylist[currentPlayingIndex]
-                                    saveVideoProgress(currentVideo.path, currentVideo.duration)
+                                    markVideoAsWatched(currentVideo.path)
                                     videoMarkedAsCompleted = true
                                 }
                             }
@@ -2282,10 +2305,14 @@ class MainActivity : AppCompatActivity() {
                         MediaPlayer.Event.EndReached -> {
                             // Allow screen to turn off once playback ends
                             window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                            // Save progress when video naturally ends
+                            // Save progress when video naturally ends.
+                            // Use Long.MAX_VALUE as a "fully watched" sentinel so the watched
+                            // badge always appears reliably — even when video.duration is 0 or
+                            // inaccurate (MediaStore values can be stale).
                             if (!videoMarkedAsCompleted && currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size) {
                                 val currentVideo = currentPlaylist[currentPlayingIndex]
-                                saveVideoProgress(currentVideo.path, currentVideo.duration)
+                                markVideoAsWatched(currentVideo.path)
+                                videoMarkedAsCompleted = true
                             }
                             playNextVideo()
                         }
@@ -2334,12 +2361,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun playNextVideo() {
         if (currentPlaylist.isNotEmpty() && currentPlayingIndex != -1 && currentPlayingIndex < currentPlaylist.size - 1) {
-            // Save current video progress NOW, before changing the index.
-            // stopVideo() (called inside playVideo) uses currentPlayingIndex to decide which
-            // path to save to — if we increment first it writes to the wrong video.
-            mediaPlayer?.let { player ->
-                val currentVideo = currentPlaylist[currentPlayingIndex]
-                saveVideoProgress(currentVideo.path, player.time)
+            // Save current video progress NOW, before changing the index — BUT only if the
+            // video hasn't already been marked as watched. If it has, we must not overwrite
+            // the Long.MAX_VALUE sentinel with the raw end-of-file timestamp.
+            if (!videoMarkedAsCompleted) {
+                mediaPlayer?.let { player ->
+                    val currentVideo = currentPlaylist[currentPlayingIndex]
+                    saveVideoProgress(currentVideo.path, player.time)
+                }
             }
             currentPlayingIndex++
             playVideo(currentPlaylist[currentPlayingIndex])
@@ -2388,9 +2417,12 @@ class MainActivity : AppCompatActivity() {
                 // write the old video's position into the next video's progress key.
                 // currentVideoPath is still the path of the video that was actually playing
                 // because playVideo() only updates it AFTER stopVideo() returns.
+                // Also: never overwrite the Long.MAX_VALUE "watched" sentinel.
                 val pathToSave = currentVideoPath
                 if (!pathToSave.isNullOrEmpty()) {
-                    saveVideoProgress(pathToSave, player.time)
+                    if (!videoMarkedAsCompleted) {
+                        saveVideoProgress(pathToSave, player.time)
+                    }
                     saveVideoTranslation(pathToSave, currentTranslationX, currentTranslationY)
                 }
                 player.stop()
@@ -2430,6 +2462,12 @@ class MainActivity : AppCompatActivity() {
             controller.hide(androidx.core.view.WindowInsetsCompat.Type.systemBars())
             controller.systemBarsBehavior = androidx.core.view.WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }
+    }
+
+    private fun markVideoAsWatched(path: String) {
+        android.util.Log.d("OniPlayer", "Marking video as watched: $path")
+        // Long.MAX_VALUE is the "fully watched" sentinel recognised by VideoAdapter
+        sharedPrefs.edit().putLong("progress_$path", Long.MAX_VALUE).apply()
     }
 
     private fun saveVideoProgress(path: String, time: Long) {

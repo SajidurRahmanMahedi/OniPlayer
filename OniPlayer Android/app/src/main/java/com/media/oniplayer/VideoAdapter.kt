@@ -44,16 +44,17 @@ class VideoAdapter(
         
         // Handle progress and watched status
         val progress = sharedPrefs.getLong("progress_${video.path}", 0L)
-        if (progress > 0 && video.duration > 0) {
+        // Long.MAX_VALUE is the sentinel saved by markVideoAsWatched() — always show badge.
+        val isFullyWatched = progress == Long.MAX_VALUE ||
+            (progress > 0 && video.duration > 0 && progress * 100 / video.duration >= 100)
+        if (isFullyWatched) {
+            holder.watchedBadge.visibility = View.VISIBLE
+            holder.progressBar.visibility = View.GONE
+        } else if (progress > 0 && video.duration > 0) {
             val percentage = (progress * 100 / video.duration).toInt()
-            if (percentage >= 100) {
-                holder.watchedBadge.visibility = View.VISIBLE
-                holder.progressBar.visibility = View.GONE
-            } else {
-                holder.watchedBadge.visibility = View.GONE
-                holder.progressBar.visibility = View.VISIBLE
-                holder.progressBar.progress = percentage
-            }
+            holder.watchedBadge.visibility = View.GONE
+            holder.progressBar.visibility = View.VISIBLE
+            holder.progressBar.progress = percentage
         } else {
             holder.watchedBadge.visibility = View.GONE
             holder.progressBar.visibility = View.GONE
