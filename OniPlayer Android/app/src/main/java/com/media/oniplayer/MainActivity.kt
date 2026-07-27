@@ -1067,7 +1067,7 @@ class MainActivity : AppCompatActivity() {
             try {
                 val folder = File(folderPath)
                 if (folder.exists() && folder.isDirectory) {
-                    if (deleteRecursively(folder)) {
+                    if (deleteFolderVideosOnly(folder)) {
                         deletedCount++
                     }
                 }
@@ -1095,15 +1095,38 @@ class MainActivity : AppCompatActivity() {
         refreshVideoLibrary()
     }
     
-    private fun deleteRecursively(file: File): Boolean {
+    private fun deleteFolderVideosOnly(folder: File): Boolean {
         return try {
-            if (file.isDirectory) {
-                file.listFiles()?.forEach { child ->
-                    deleteRecursively(child)
+            if (!folder.exists() || !folder.isDirectory) return false
+            
+            var deletedAny = false
+            val contents = folder.listFiles() ?: return false
+            
+            for (child in contents) {
+                // Delete only video files directly inside this folder.
+                // Do NOT touch nested folders (subdirectories) or non-video files.
+                if (child.isFile) {
+                    val extension = child.extension.lowercase(Locale.ROOT)
+                    if (extension in VIDEO_EXTENSIONS) {
+                        if (child.delete()) {
+                            deletedAny = true
+                        }
+                    }
                 }
             }
-            file.delete()
+            
+            // Delete the parent folder directory ONLY if it is now completely empty
+            // (i.e., no nested subfolders or non-video files remain inside it)
+            val remainingContents = folder.listFiles()
+            if (remainingContents != null && remainingContents.isEmpty()) {
+                if (folder.delete()) {
+                    deletedAny = true
+                }
+            }
+            
+            deletedAny
         } catch (e: Exception) {
+            android.util.Log.e("OniPlayer", "Error deleting folder videos: ${folder.absolutePath}", e)
             false
         }
     }
