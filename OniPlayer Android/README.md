@@ -14,7 +14,7 @@
 
 ---
 
-## 📖 Overview
+## Overview
 
 **OniPlayer** is a highly polished native Android media player built in Kotlin. It features a full dark mode system designed around curated deep dark palettes and sky-blue accents. Powered by the industry-grade **LibVLC core engine**, OniPlayer guarantees butter-smooth hardware-accelerated playback of practically any video format, accompanied by an extremely responsive, gesture-rich viewing experience.
 
@@ -22,16 +22,16 @@ Whether you're organizing local collections into immediate folder trees, selecti
 
 ---
 
-## ✨ Outstanding Features
+## Outstanding Features
 
 OniPlayer delivers an exceptionally premium experience right out of the box through these powerful features:
 
-### 🎬 High-Performance Playback & Format Compatibility
+### High-Performance Playback & Format Compatibility
 *   **LibVLC 3.7.0 Core:** Complete support for major video and audio standards (`.mp4`, `.mkv`, `.avi`, `.mov`, `.wmv`, `.flv`, `.webm`, `.m4v`, `.3gp`, `.ts`, and more).
 *   **Hardware Acceleration:** Leverages the GPU to decode high-resolution streams smoothly with minimal battery impact.
 *   **Smart Subtitle Synchronization:** Automatically searches for and mounts candidate subtitle files (`.srt`, `.ass`, `.ssa`, `.vtt`, `.sub`, `.smi`, `.ttml`, `.dfxp`) located in the same directory, matching the video name.
 
-### 🖐️ Gesture-Driven Playback Controls
+### Gesture-Driven Playback Controls
 OniPlayer comes with an intuitive gesture interface tailored for power users:
 *   **Brightness Swipe (Left-Side):** Smoothly adjust screen brightness by swiping up/down on the left half of the screen.
 *   **Volume Swipe (Right-Side):** Adjust the system and VLC volume simultaneously by swiping up/down on the right half.
@@ -41,7 +41,7 @@ OniPlayer comes with an intuitive gesture interface tailored for power users:
 *   **UI Touch Prevention (Screen Lock):** A long-press locks the interface, hiding all indicators and control bars to prevent accidental back actions or taps. A simple lock button overlay lets you unlock with ease.
 *   **Edge-Gesture Protection:** Touch gestures are ignored within a fixed edge area ($48\text{ dp}$ threshold) to prevent clashes with system-level back swipes or navigation gestures.
 
-### 📂 Gorgeous Library UI & Watch Progress Memory
+### Gorgeous Library UI & Watch Progress Memory
 *   **Curated Dark Design:** Employs an ultra-modern, deep-dark color scheme ([colors.xml](file:///c:/Users/Archer/Desktop/OniPlayer-Android-main/app/src/main/res/values/colors.xml)) utilizing Sky-Blue (`#4FC3F7`) highlights, Netflix-Red style progress bars, and elegant transparent rounded confirm dialogs.
 *   **Folder Tree Navigation:** Media is grouped by their immediate parent folders, separating internal storage and SD card collections cleanly.
 *   **Watch History & Resume:** Saves the playback position of all videos in real-time. Displays a custom red progress bar under partially watched videos and a solid `WATCHED` badge for completed clips. Includes a **"Continue from Position"** quick-button inside the player.
@@ -50,7 +50,7 @@ OniPlayer comes with an intuitive gesture interface tailored for power users:
 
 ---
 
-## 🛠️ Tech Stack & Core Libraries
+## Tech Stack & Core Libraries
 
 *   **Core Platform:** Native Android (Kotlin)
 *   **Minimum/Target SDK:** Android 15 (API 35) / Android 16 (API 36)
@@ -60,7 +60,7 @@ OniPlayer comes with an intuitive gesture interface tailored for power users:
 
 ---
 
-## 📂 Project Architecture
+## Project Architecture
 
 ```
 OniPlayer-Android-main
@@ -86,14 +86,14 @@ OniPlayer-Android-main
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
-### 📋 Prerequisites
+### Prerequisites
 *   **Android Studio** Jellyfish or later.
 *   **JDK 11** or higher.
 *   An Android device running **Android 15+ (API 35+)** for full system permission support.
 
-### 📥 Building the Project
+### Building the Project
 1.  Clone the repository:
     ```bash
     git clone https://github.com/yourusername/OniPlayer.git
@@ -118,7 +118,7 @@ OniPlayer-Android-main
 
 ---
 
-## 🔗 Key Code References
+## Key Code References
 
 To understand how OniPlayer operates, you can explore the primary source files:
 
@@ -129,13 +129,9 @@ To understand how OniPlayer operates, you can explore the primary source files:
 
 ---
 
-## 🛡️ License
+## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
 *(Note: LibVLC is distributed under the GNU Lesser General Public License, LGPL v2.1 or later)*.
 
 ---
-
-<p align="center">
-  Developed with ❤️ for high-performance mobile entertainment.
-</p>

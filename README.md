@@ -19,23 +19,23 @@
 
 ---
 
-## 📖 Welcome to OniPlayer
+## Welcome to OniPlayer
 
 **OniPlayer** is a highly polished, distraction-free media playback ecosystem tailored for both mobile (Android) and desktop (Windows) platforms. Unified by a curated deep dark interface, vibrant sky-blue accents, and intuitive control schemes, OniPlayer ensures butter-smooth hardware-accelerated playback of practically any video or audio format.
 
 Rather than compromising with generic wrapper players, OniPlayer has been engineered natively from the ground up:
-*   **📱 OniPlayer Android:** Built natively in Kotlin, emphasizing elegant touch gestures (volume/brightness swipes, pinch-to-zoom, slow scrubbing overlay), gorgeous grid layouts, resume-playback memory, and strict edge-swipe protection.
-*   **💻 OniPlayer Desktop:** Built in Python using PyQt6, focusing on a fully keyboard-and-mouse-centric experience (including unique multi-key combinations and mouse scroll controls), distraction-free default fullscreen, auto-hiding OS cursor, and built-in standalone packaging.
+*   **OniPlayer Android:** Built natively in Kotlin, emphasizing elegant touch gestures (volume/brightness swipes, pinch-to-zoom, slow scrubbing overlay), gorgeous grid layouts, resume-playback memory, and strict edge-swipe protection.
+*   **OniPlayer Desktop:** Built in Python using PyQt6, focusing on a fully keyboard-and-mouse-centric experience (including unique multi-key combinations and mouse scroll controls), distraction-free default fullscreen, auto-hiding OS cursor, and built-in standalone packaging.
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 This repository is organized as a multi-project monorepo containing both codebases in clean, isolated workspaces:
 
 ```
 OniPlayer (Root)
-├── 📱 OniPlayer Android      <- Kotlin Native App (Android 15+ Target API 36)
+├── OniPlayer Android      <- Kotlin Native App (Android 15+ Target API 36)
 │   ├── app/                  <- Source code & layout assets (colors.xml, constraint layouts)
 │   ├── gradle/               <- Build configuration
 │   ├── build.gradle.kts      <- Root build script
@@ -46,7 +46,7 @@ OniPlayer (Root)
 │   ├── .gitignore            <- Android-specific Gradle & build ignore rules
 │   └── README.md             <- Mobile-specific guides & instructions
 │
-├── 💻 OniPlayer Desktop      <- Python 3.10+ & PyQt6 App (Windows x64)
+├── OniPlayer Desktop      <- Python 3.10+ & PyQt6 App (Windows x64)
 │   ├── plugins/              <- VLC plugins directory
 │   ├── libvlc.dll            <- Core VLC engine library
 │   ├── libvlccore.dll        <- Core VLC engine library
@@ -65,7 +65,7 @@ OniPlayer (Root)
 
 ---
 
-## ⚡ Side-by-Side Comparison
+## Side-by-Side Comparison
 
 | Feature | 📱 OniPlayer Android | 💻 OniPlayer Desktop |
 | :--- | :--- | :--- |
@@ -80,35 +80,35 @@ OniPlayer (Root)
 
 ---
 
-## 📱 OniPlayer Android
+## OniPlayer Android
 
 The mobile client delivers a beautiful library experience alongside an interactive, gesture-rich player interface.
 
-### ✨ Highlights
+### Highlights
 *   **Library Browsing:** Group local videos instantly by immediate folder trees. Long-press to activate Batch Selection mode for secure deletion using elegant confirm dialogs.
 *   **Intuitive Gesture Control:** Swipe up/down on the left side for brightness, on the right side for volume. Swipe horizontally for precise seek scrubbing with a clean overlay showing time differences (e.g., `+0:12` or `-1:05`).
 *   **Screen Lock:** Long-press to lock screen controls, hiding all icons to prevent accidental navigation or touch inputs during playback.
 *   **Thumbnail Optimization:** Leverages Glide v4 for rapid caching and display of local media thumbnails.
 
-👉 **Ready to build?** Follow the detailed setup instructions in the [OniPlayer Android README](OniPlayer%20Android/README.md).
+**Ready to build?** Follow the detailed setup instructions in the [OniPlayer Android README](OniPlayer%20Android/README.md).
 
 ---
 
-## 💻 OniPlayer Desktop
+## OniPlayer Desktop
 
 The desktop client provides a powerful, distraction-free environment that hides all desktop clutter, allowing you to control everything seamlessly through your mouse and keyboard.
 
-### ✨ Highlights
+### Highlights
 *   **Keyboard & Mouse-Centric Navigation:** Instantly swap audio tracks with `Hold Right-Click + Scroll`, rewind/forward with `Hold Left-Click + Scroll`, or skip files with combined clicks.
 *   **Curator Control:** Double-click for Play/Pause, middle-click for Fullscreen, and hold middle-click to toggle subtitles.
 *   **Cursor Management:** Auto-hides the mouse cursor over video, reappearing smoothly when hovering over control bars or menus. Features stuck-cursor prevention for a flawless Windows experience.
 *   **Auto-Advance Playlists:** Drop a directory in and let it automatically advance sequentially through all candidate videos.
 
-👉 **Ready to run?** Follow the keyboard layout guides and build instructions in the [OniPlayer Desktop README](OniPlayer%20Desktop/README.md).
+**Ready to run?** Follow the keyboard layout guides and build instructions in the [OniPlayer Desktop README](OniPlayer%20Desktop/README.md).
 
 ---
 
-## 🚀 Quick Setup Reference
+## Quick Setup Reference
 
 ### To Run the Desktop Version
 Make sure you have Python 3.10+ installed on Windows.
@@ -132,7 +132,7 @@ cd "OniPlayer Android"
 
 ---
 
-## 📄 License & Attribution
+## License & Attribution
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -141,7 +141,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 *   **PyQt6 (Desktop):** PyQt6 is licensed under the GPL v3 license or a commercial license.
 
 ---
-
-<p align="center">
-  Developed with ❤️ for high-performance, cross-platform media enjoyment.
-</p>

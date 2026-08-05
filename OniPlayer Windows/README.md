@@ -16,31 +16,31 @@ OniPlayer is a minimal, keyboard-and-mouse-centric desktop media player built us
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎥 Media Playback
+### Media Playback
 * **Universal Format Support:** Decodes all major formats (MP4, MKV, AVI, MOV, WMV) natively using high-performance hardware acceleration via VLC.
 * **Smart Playlists:** Drop a file or directory into the player to automatically queue up all video files in that directory.
 * **Auto-Advance:** Seamlessly moves to the next video when the current one finishes.
 
-### 🔊 Advanced Audio Control
+### Advanced Audio Control
 * **Track Switching:** Supports switching between multiple audio streams (multi-language tracks) inside the container.
 * **Smart Volume:** Smooth scaling with an elegant translucent on-screen display (OSD). Default volume is set to a comfortable `60`.
 * **Quick Mute:** Instantly toggle sound with a simple keyboard shortcut or clicking the volume icon.
 
-### 💬 Complete Subtitle System
+### Complete Subtitle System
 * **Auto-Discovery:** Automatically detects and loads external subtitle files (SRT, ASS) with matching filenames.
 * **Track Selection:** Easily switch between multiple subtitle tracks or disable subtitles entirely.
 * **Subtitle Sync:** Dynamically delay or advance subtitle rendering to match the audio.
 
-### 🖥️ Immersive User Interface
+### Immersive User Interface
 * **Distraction-Free Design:** Modern dark theme with minimalist styling. Fullscreen by default.
 * **Ultra-Hidden Cursor:** The mouse cursor vanishes automatically over the video area. It instantly reappears when hovering over the timeline, title bar, or when opening the context menu.
 * **Stuck-Cursor Prevention:** Leverages an automatic background OS cursor-refresh handler to prevent standard Windows loading spinners from getting stuck on screen.
 
 ---
 
-## ⌨️ Controls & Gestures Guide
+## Controls & Gestures Guide
 
 OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced mouse gestures.
 
@@ -76,7 +76,7 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 * Windows OS (64-bit)
@@ -98,7 +98,7 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
 
 ---
 
-## 📦 Packaging and Distribution
+## Packaging and Distribution
 
 ### 1. Compile to Executable (`PyInstaller`)
 To bundle the application into exe::
@@ -111,6 +111,6 @@ Compile the `setup.iss` script in Inno Setup to package your PyInstaller distrib
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

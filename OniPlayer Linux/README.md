@@ -16,25 +16,25 @@ OniPlayer Linux is a minimal, keyboard-and-mouse-centric desktop media player bu
 
 ---
 
-## ✨ Features
+## Features
 
-### 🎥 Media Playback
+### Media Playback
 * **Universal Format Support:** Decodes all major formats (MP4, MKV, AVI, MOV, WMV, WebM) natively using Qt6 Multimedia with GStreamer backend.
 * **Smart Playlists:** Drop a file or directory into the player to automatically queue up all video files in that directory.
 * **Auto-Advance:** Seamlessly moves to the next video when the current one finishes.
 
-### 🔊 Advanced Audio Control
+### Advanced Audio Control
 * **Smart Volume:** Smooth scaling with an elegant translucent on-screen display (OSD). Default volume is set to a comfortable `60`.
 * **Quick Mute:** Instantly toggle sound with a simple keyboard shortcut or clicking the volume icon.
 
-### 🖥️ Immersive User Interface
+### Immersive User Interface
 * **Distraction-Free Design:** Modern dark theme with minimalist styling. Fullscreen by default.
 * **Ultra-Hidden Cursor:** The mouse cursor vanishes automatically over the video area. It instantly reappears when hovering over the timeline or when opening the context menu.
 * **Elegant Overlays:** Cyan-stroked text overlays for volume and title information.
 
 ---
 
-## ⌨️ Controls & Gestures Guide
+## Controls & Gestures Guide
 
 OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced mouse gestures.
 
@@ -66,7 +66,7 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### Prerequisites
 * Linux OS (tested on Ubuntu/Debian-based systems)
@@ -100,7 +100,7 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
 
 ---
 
-## 📦 Additional Features
+## Additional Features
 
 ### Context Menu (Right-Click)
 - Play/Pause
@@ -119,6 +119,6 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
 
 ---
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
