@@ -1,10 +1,6 @@
 # OniPlayer Android
 
 <p align="center">
-  <img src="icon.png" alt="OniPlayer Icon" width="128" height="128" style="border-radius: 20%;" />
-</p>
-
-<p align="center">
   <strong>A premium, high-performance, dark-themed native Android video player powered by VideoLAN's LibVLC.</strong>
 </p>
 

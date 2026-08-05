@@ -1,10 +1,6 @@
 # OniPlayer Desktop
 
 <p align="center">
-  <img src="icon.ico" alt="OniPlayer Icon" width="128" height="128" />
-</p>
-
-<p align="center">
   <strong>A minimal, keyboard-and-mouse-centric desktop media player built using PyQt6 and libvlc.</strong>
 </p>
 
