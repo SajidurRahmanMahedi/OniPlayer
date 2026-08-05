@@ -67,7 +67,7 @@ OniPlayer (Root)
 
 ## Side-by-Side Comparison
 
-| Feature | 📱 OniPlayer Android | 💻 OniPlayer Desktop |
+| Feature | OniPlayer Android | OniPlayer Desktop |
 | :--- | :--- | :--- |
 | **Language & Platform** | Kotlin / Native Android 15+ (API 35/36) | Python 3.10+ / PyQt6 on Windows x64 |
 | **Core Media Engine** | LibVLC for Android (`3.7.0`) | LibVLC Binding (`python-vlc`) |
