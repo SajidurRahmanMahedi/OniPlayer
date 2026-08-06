@@ -12,7 +12,7 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Windows-blue?style=for-the-badge&logo=platform&logoColor=white" alt="Platforms Badge" />
+  <img src="https://img.shields.io/badge/Platform-Android%20%7C%20Windows%20%7C%20Linux-blue?style=for-the-badge&logo=platform&logoColor=white" alt="Platforms Badge" />
   <img src="https://img.shields.io/badge/Engines-LibVLC%203.7-orange?style=for-the-badge&logo=vlc&logoColor=white" alt="VLC Badge" />
   <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="License Badge" />
 </p>
