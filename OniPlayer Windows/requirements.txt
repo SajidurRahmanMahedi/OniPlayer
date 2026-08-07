@@ -4,5 +4,10 @@ PyQt6-Qt6==6.8.2
 PyQt6_sip==13.11.1
 python-vlc==3.0.21203
 
-# PyInstaller and Dependencies
-pyinstaller>=6.11.1
+# PyInstaller Dependencies
+altgraph==0.17.5
+packaging==26.3
+pefile==2024.8.26
+pyinstaller==6.21.0
+pyinstaller-hooks-contrib==2026.6
+pywin32-ctypes==0.2.3
