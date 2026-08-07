@@ -58,6 +58,29 @@ os.environ['VLC_PLUGIN_PATH'] = vlc_plugins_path
 # Import VLC after setting up environment
 import vlc
 
+TIMELINE_BUTTON_STYLE = """
+    QPushButton {
+        background-color: rgba(255, 255, 255, 0.07);
+        border: none;
+        border-radius: 4px;
+        padding: 5px;
+    }
+    QPushButton:hover {
+        background-color: rgba(255, 255, 255, 0.13);
+    }
+    QPushButton:pressed {
+        background-color: rgba(255, 255, 255, 0.20);
+    }
+"""
+
+def timeline_icon(style, pixmap_type, size=20):
+    pixmap = style.standardIcon(pixmap_type).pixmap(size, size)
+    painter = QPainter(pixmap)
+    painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceIn)
+    painter.fillRect(pixmap.rect(), QColor(200, 200, 200))
+    painter.end()
+    return QIcon(pixmap)
+
 class ClickableSlider(QSlider):
     def __init__(self, orientation, parent=None):
         super().__init__(orientation, parent)
@@ -967,11 +990,11 @@ class OniPlayer(QMainWindow):
         
         # Create top control container first
         self.top_control_container = QWidget()
+        self.top_control_container.setObjectName("topControlContainer")
         self.top_control_container.setFixedHeight(30)
-        self.top_control_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.top_control_container.setStyleSheet("""
-            QWidget {
-                background: none;
+            #topControlContainer {
+                background-color: #2D2D2D;
             }
             QPushButton {
                 background-color: transparent;
@@ -999,11 +1022,11 @@ class OniPlayer(QMainWindow):
 
         # Create timeline container
         self.timeline_container = QWidget()
+        self.timeline_container.setObjectName("timelineContainer")
         self.timeline_container.setFixedHeight(40)
-        self.timeline_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.timeline_container.setStyleSheet("""
-            QWidget {
-                background: none;
+            #timelineContainer {
+                background-color: #2D2D2D;
             }
         """)
         
@@ -1096,63 +1119,24 @@ class OniPlayer(QMainWindow):
         # Play button in timeline
         self.play_button = QPushButton()
         self.play_button.setFixedSize(32, 32)
-        self.play_button.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(50, 50, 50, 0.8);
-                border: none;
-                border-radius: 16px;
-                padding: 5px;
-            }
-            QPushButton:hover {
-                background-color: rgba(70, 70, 70, 0.9);
-            }
-            QPushButton:pressed {
-                background-color: rgba(90, 90, 90, 1.0);
-            }
-        """)
-        self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+        self.play_button.setStyleSheet(TIMELINE_BUTTON_STYLE)
+        self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
         self.play_button.clicked.connect(self.toggle_play)
         timeline_layout.addWidget(self.play_button)
 
         # Previous button
         self.prev_button = QPushButton()
         self.prev_button.setFixedSize(32, 32)
-        self.prev_button.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(50, 50, 50, 0.8);
-                border: none;
-                border-radius: 16px;
-                padding: 5px;
-            }
-            QPushButton:hover {
-                background-color: rgba(70, 70, 70, 0.9);
-            }
-            QPushButton:pressed {
-                background-color: rgba(90, 90, 90, 1.0);
-            }
-        """)
-        self.prev_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaSkipBackward))
+        self.prev_button.setStyleSheet(TIMELINE_BUTTON_STYLE)
+        self.prev_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaSkipBackward))
         self.prev_button.clicked.connect(self.play_previous)
         timeline_layout.addWidget(self.prev_button)
 
         # Next button
         self.next_button = QPushButton()
         self.next_button.setFixedSize(32, 32)
-        self.next_button.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(50, 50, 50, 0.8);
-                border: none;
-                border-radius: 16px;
-                padding: 5px;
-            }
-            QPushButton:hover {
-                background-color: rgba(70, 70, 70, 0.9);
-            }
-            QPushButton:pressed {
-                background-color: rgba(90, 90, 90, 1.0);
-            }
-        """)
-        self.next_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaSkipForward))
+        self.next_button.setStyleSheet(TIMELINE_BUTTON_STYLE)
+        self.next_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaSkipForward))
         self.next_button.clicked.connect(self.play_next)
         timeline_layout.addWidget(self.next_button)
         
@@ -1211,21 +1195,8 @@ class OniPlayer(QMainWindow):
         # Volume icon button
         self.volume_button = QPushButton()
         self.volume_button.setFixedSize(28, 28)  # Reduced from 32x32
-        self.volume_button.setStyleSheet("""
-            QPushButton {
-                background-color: rgba(50, 50, 50, 0.8);
-                border: none;
-                border-radius: 16px;
-                padding: 5px;
-            }
-            QPushButton:hover {
-                background-color: rgba(70, 70, 70, 0.9);
-            }
-            QPushButton:pressed {
-                background-color: rgba(90, 90, 90, 1.0);
-            }
-        """)
-        self.volume_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolume))
+        self.volume_button.setStyleSheet(TIMELINE_BUTTON_STYLE)
+        self.volume_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaVolume, size=18))
         self.volume_button.clicked.connect(self.toggle_mute)
         volume_layout.addWidget(self.volume_button)
         
@@ -1315,8 +1286,6 @@ class OniPlayer(QMainWindow):
         timeline_layout.addLayout(volume_layout)
         
         # Create control containers with overlay behavior
-        self.top_control_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.timeline_container.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         
         # Create top control layout and add widgets
         top_control_layout = QHBoxLayout(self.top_control_container)
@@ -1597,7 +1566,7 @@ class OniPlayer(QMainWindow):
                 self.time_label.setText("0:00")
                 self.duration_label.setText("/ 0:00")
                 self.title_label.setText("OniPlayer")
-                self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+                self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
                 self.video_frame.update()  # Force update to show logo
                 return
                 
@@ -1620,7 +1589,7 @@ class OniPlayer(QMainWindow):
                 self.time_label.setText("0:00")
                 self.duration_label.setText("/ 0:00")
                 self.title_label.setText("OniPlayer")
-                self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+                self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
                 self.video_frame.update()  # Force update to show logo
                 return
             
@@ -1852,11 +1821,11 @@ class OniPlayer(QMainWindow):
             
         if self.media_player.is_playing():
             self.media_player.pause()
-            self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPlay))
+            self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
             self.timer.stop()
         else:
             self.media_player.play()
-            self.play_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaPause))
+            self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPause))
             self.timer.start()
             
     def toggle_maximize(self):
@@ -1940,10 +1909,10 @@ class OniPlayer(QMainWindow):
             # Update mute state and icon if volume changes
             if volume > 0 and self.is_muted:
                 self.is_muted = False
-                self.volume_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolume))
+                self.volume_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaVolume, size=18))
             elif volume == 0 and not self.is_muted:
                 self.is_muted = True
-                self.volume_button.setIcon(self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolumeMuted))
+                self.volume_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaVolumeMuted, size=18))
         except Exception as e:
             print(f"Error setting volume: {str(e)}")
 
@@ -2215,9 +2184,9 @@ class OniPlayer(QMainWindow):
             self.volume_button.setIcon(QIcon())
             
             if is_muted or current_volume == 0:
-                icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolumeMuted)
+                icon = timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaVolumeMuted, size=18)
             else:
-                icon = self.style().standardIcon(QStyle.StandardPixmap.SP_MediaVolume)
+                icon = timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaVolume, size=18)
             
             self.volume_button.setIcon(icon)
             print(f"Updated volume icon - Muted: {is_muted}, Volume: {current_volume}")
