@@ -994,7 +994,7 @@ class OniPlayer(QMainWindow):
         self.top_control_container.setFixedHeight(30)
         self.top_control_container.setStyleSheet("""
             #topControlContainer {
-                background-color: #2D2D2D;
+                background-color: #1A1A1A;
             }
             QPushButton {
                 background-color: transparent;
@@ -1026,7 +1026,7 @@ class OniPlayer(QMainWindow):
         self.timeline_container.setFixedHeight(40)
         self.timeline_container.setStyleSheet("""
             #timelineContainer {
-                background-color: #2D2D2D;
+                background-color: #1A1A1A;
             }
         """)
         
