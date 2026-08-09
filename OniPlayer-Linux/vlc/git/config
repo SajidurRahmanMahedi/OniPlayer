@@ -1,0 +1,8 @@
+[core]
+	repositoryformatversion = 0
+	filemode = true
+	bare = false
+	logallrefupdates = true
+[remote "origin"]
+	url = https://code.videolan.org/videolan/vlc.git
+	fetch = +refs/tags/3.0.23:refs/tags/3.0.23
