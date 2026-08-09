@@ -1,1 +1,0 @@
-sudo pacman -S --needed qt6-multimedia gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav pipewire pipewire-pulse wireplumber ffmpeg
