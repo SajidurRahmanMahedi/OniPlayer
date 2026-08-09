@@ -1,7 +1,7 @@
 sudo pacman -S --needed base-devel git libtool automake autoconf pkgconf gettext flex bison lua
 
 
-# git clone https://code.videolan.org/videolan/vlc.git
+git clone https://code.videolan.org/videolan/vlc.git
 cd vlc
 git checkout 3.0.23
 
