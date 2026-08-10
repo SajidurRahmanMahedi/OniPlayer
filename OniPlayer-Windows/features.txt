@@ -1,0 +1,74 @@
+OniPlayer Features
+================
+
+Media Playback
+-------------
+✓ Universal Format Support:
+  - Supports all major video formats (MP4, AVI, MKV, MOV, WMV)
+  - Hardware acceleration support
+
+✓ Playlist Management:
+  - Automatic playlist creation from directory
+  - Next/Previous video navigation
+  - Auto-play next video
+
+✓ Advanced Playback Control:
+  - Precise seeking with timeline
+  - Smooth fast-forward and rewind
+
+Audio Features
+-------------
+✓ Audio Management:
+  - Multiple audio track support
+  - Smart volume control
+  - Mute functionality
+  - Volume level overlay display
+  - 60 volume is default
+
+Subtitle Support
+--------------
+✓ Comprehensive Subtitle Features:
+  - Multiple subtitle track support
+  - Auto-detection of subtitle files
+  - Subtitle synchronization adjustment
+
+User Interface
+-------------
+✓ Modern Design:
+  - Clean, minimalist dark theme
+  - Elegant default logo screen
+
+✓ Control Interface:
+  - Intuitive timeline navigation
+  - Easy-to-use
+  - Mouse shortcuts for all actions
+  - Keyboard shortcuts for all actions
+
+Window Management
+---------------
+✓ Flexible Display Options:
+  - Fullscreen mode
+  - Window mode with
+  - Multi-monitor support
+
+File Management
+-------------
+✓ File Handling:
+  - Drag and drop support
+  - Automatic playlist creation
+
+Performance
+----------
+✓ Optimized Operation:
+  - Hardware acceleration
+  - Smooth playback
+  - Low resource usage
+  - Responsive controls
+
+Additional Features
+----------------
+✓ Cursor:
+  - Full screen mode is the default mode
+  - Mouse cursor will not appear on the video screen
+  - Cursor will appear when the context menu is open
+  - Cursor will appear if hover the cursor on the timeline or title bar
