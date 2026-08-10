@@ -18,6 +18,7 @@
 *.md text eol=lf
 *.txt text eol=lf
 *.iss text eol=lf
+*.sh text eol=lf
 
 # Explicitly declare files that are always binary and must not be modified.
 *.dll binary
