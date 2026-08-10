@@ -27,4 +27,5 @@ python3 ./get_engine.py
 
 rm -rf vlc
 rm ./get_engine.py
+rm ./vlc.zip
 rm -- "$0"
