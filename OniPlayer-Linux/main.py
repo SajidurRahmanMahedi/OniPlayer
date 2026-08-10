@@ -549,16 +549,19 @@ class VideoFrame(QFrame):
         # Close the in-window menu if the click lands outside it.
         if self.context_menu.isVisible():
             gpos   = event.globalPosition().toPoint()
+            lpos   = self.mapFromGlobal(gpos)
             menu_r = self.context_menu.geometry()
             sub    = self.context_menu._active_sub
             sub_r  = sub.geometry() if (sub and sub.isVisible()) else QRect()
-            if not menu_r.contains(gpos) and not sub_r.contains(gpos):
+            
+            # Check if click is outside both main menu and any visible submenu
+            if not menu_r.contains(lpos) and not sub_r.contains(lpos):
                 self.context_menu._close_root()
+                # Consume the event to prevent reopening
                 if event.button() == Qt.MouseButton.RightButton:
-                    # Consume this right-press so contextMenuEvent won't re-open immediately
                     self.show_context = False
-                    event.accept()
-                    return
+                event.accept()
+                return
 
         if event.button() == Qt.MouseButton.LeftButton:
             self.left_button_pressed = True
@@ -620,6 +623,12 @@ class VideoFrame(QFrame):
 
     def contextMenuEvent(self, event):
         try:
+            # Prevent multiple context menus from opening
+            if self.context_menu.isVisible():
+                self.context_menu._close_root()
+                event.accept()
+                return
+
             current_time = QDateTime.currentMSecsSinceEpoch()
             time_since_combination = (
                 current_time - self.combination_start_time
@@ -1390,11 +1399,21 @@ class OniPlayer(QMainWindow):
         self.setAcceptDrops(True)
         
         # Initialize VLC engine instance for Linux.
-        # --no-overlay forces VLC to blend subtitles into video frames rather than
-        # using an XV overlay that renders on top of the X11 surface - without this
-        # subtitles are drawn under the overlay and are invisible.
-        instance_args = ["--no-overlay"]
+        # Minimal VLC configuration for subtitle support:
+        # --no-xvideo: Disable XV overlay to ensure subtitles render properly
+        # --vout=x11: Use X11 video output for better subtitle support
+        # --no-video-title-show: Disable video title overlay
+        instance_args = [
+            "--no-xvideo",
+            "--vout=x11",
+            "--no-video-title-show"
+        ]
         self.instance = vlc.Instance(instance_args)
+        
+        if self.instance is None:
+            print("Error: Failed to create VLC instance")
+            raise RuntimeError("Failed to create VLC instance")
+            
         self.media_player = self.instance.media_player_new()
         
         self.media_player.audio_set_volume(60)
@@ -1447,6 +1466,9 @@ class OniPlayer(QMainWindow):
         self.hover_timer.timeout.connect(self.handle_mouse_hover)
         self.hover_timer.start()
 
+        # Fullscreen transition flag to prevent ghost effects
+        self._fullscreen_transition = False
+
 
 
     def check_subtitle_tracks(self):
@@ -1473,11 +1495,14 @@ class OniPlayer(QMainWindow):
                     if self.last_subtitle_track is not None:
                         valid_ids = [track_id for track_id, _ in valid_tracks]
                         if self.last_subtitle_track in valid_ids:
-                            self.media_player.video_set_spu(self.last_subtitle_track)
+                            result = self.media_player.video_set_spu(self.last_subtitle_track)
+                            print(f"[DEBUG] Restored subtitle track {self.last_subtitle_track}, result: {result}")
                     else:
                         # No prior track - auto-enable the first available subtitle.
                         first_id = valid_tracks[0][0]
-                        if self.media_player.video_set_spu(first_id) == 0:
+                        result = self.media_player.video_set_spu(first_id)
+                        print(f"[DEBUG] Auto-enabled first subtitle track {first_id}, result: {result}")
+                        if result == 0:
                             self.last_subtitle_track = first_id
                             if self.subtitle_delay:
                                 self.media_player.video_set_spu_delay(
@@ -1505,17 +1530,31 @@ class OniPlayer(QMainWindow):
         try:
             if track_id == -1:
                 success = self.media_player.video_set_spu(-1)
+                print(f"[DEBUG] Disabled subtitles, result: {success}")
                 return True
             
             spu_count = self.media_player.video_get_spu_count()
+            print(f"[DEBUG] Available subtitle tracks: {spu_count}")
             if spu_count > 0:
                 success = self.media_player.video_set_spu(track_id)
-                print(f"[DEBUG] set_spu({track_id}) -> {success}, current now = {self.media_player.video_get_spu()}")
+                current = self.media_player.video_get_spu()
+                print(f"[DEBUG] set_spu({track_id}) -> {success}, current now = {current}")
+                
+                # Force subtitle rendering
                 if success == 0:
                     if track_id != -1:
                         self.last_subtitle_track = track_id
+                        # Force video update to ensure subtitles render
+                        self.video_frame.update()
+                        # Try to force VLC to re-render the video with subtitles
+                        # by briefly pausing and resuming
+                        was_playing = self.media_player.is_playing()
+                        if was_playing:
+                            self.media_player.pause()
+                            QTimer.singleShot(50, lambda: self.media_player.play())
                 return success
             else:
+                print(f"[DEBUG] No subtitle tracks available")
                 return False
         except Exception as e:
             print(f"Error changing subtitle track: {e}")
@@ -1869,18 +1908,72 @@ class OniPlayer(QMainWindow):
         if not self.isFullScreen():
             self.prev_geometry = self.geometry()
             self.main_layout.setContentsMargins(0, 0, 0, 0)
+            
             self.showFullScreen()
+            
+            # Force immediate hide with aggressive repaint to prevent ghost effect
             self.top_control_container.hide()
             self.timeline_container.hide()
+            
+            # Force complete repaint sequence
+            self.top_control_container.repaint()
+            self.timeline_container.repaint()
+            self.video_frame.repaint()
+            self.repaint()
+            
             self.update_control_positions()
+            
+            # Add flag to prevent immediate showing by hover handler with shorter delay
+            self._fullscreen_transition = True
+            QTimer.singleShot(300, self._clear_fullscreen_transition)
+            
+            # Force one more refresh after transition
+            QTimer.singleShot(100, self._force_refresh_controls)
         else:
             self.showNormal()
             if hasattr(self, 'prev_geometry'):
                 self.setGeometry(self.prev_geometry)
+            
             self.top_control_container.show()
             self.timeline_container.show()
             self.main_layout.setContentsMargins(0, 30, 0, 40)
+            
+            # Force immediate geometry update
             self.update_control_positions()
+            
+            # Force complete repaint sequence
+            self.top_control_container.repaint()
+            self.timeline_container.repaint()
+            self.video_frame.repaint()
+            self.repaint()
+            
+            # Add flag to prevent immediate hiding by hover handler with shorter delay
+            self._fullscreen_transition = True
+            QTimer.singleShot(300, self._clear_fullscreen_transition)
+            
+            # Force one more refresh after transition
+            QTimer.singleShot(100, self._force_refresh_controls)
+
+    def _clear_fullscreen_transition(self):
+        """Clear the fullscreen transition flag after a short delay"""
+        self._fullscreen_transition = False
+
+    def _force_refresh_controls(self):
+        """Force refresh of control containers to eliminate ghost effects"""
+        if self.isFullScreen():
+            # Ensure controls are hidden in fullscreen
+            self.top_control_container.hide()
+            self.timeline_container.hide()
+        else:
+            # Ensure controls are shown in windowed mode
+            self.top_control_container.show()
+            self.timeline_container.show()
+        
+        # Force repaint
+        self.top_control_container.repaint()
+        self.timeline_container.repaint()
+        self.video_frame.repaint()
+        self.update()
 
     def set_position(self, position):
         if self.has_media:
@@ -2153,6 +2246,26 @@ class OniPlayer(QMainWindow):
         self.timer.start()
 
     def eventFilter(self, watched, event):
+        # Handle context menu closing on clicks outside
+        if event.type() == QEvent.Type.MouseButtonPress:
+            if hasattr(self, 'video_frame') and hasattr(self.video_frame, 'context_menu'):
+                if self.video_frame.context_menu.isVisible():
+                    # Simple check: if click is not in the menu widgets, close it
+                    is_menu_widget = (watched == self.video_frame.context_menu or 
+                                    watched == self.video_frame.context_menu._scroll_area or
+                                    watched == self.video_frame.context_menu._container)
+                    
+                    # Check submenu
+                    sub = self.video_frame.context_menu._active_sub
+                    if sub and sub.isVisible():
+                        is_menu_widget = is_menu_widget or (watched == sub or 
+                                                            watched == sub._scroll_area or 
+                                                            watched == sub._container)
+                    
+                    if not is_menu_widget:
+                        self.video_frame.context_menu._close_root()
+                        return True
+        
         if event.type() in (
             QEvent.Type.MouseMove,
             QEvent.Type.HoverMove,
@@ -2166,6 +2279,10 @@ class OniPlayer(QMainWindow):
 
     def handle_mouse_hover(self):
         if not self.isVisible() or self.isMinimized():
+            return
+
+        # Skip hover handling during fullscreen transition to prevent ghost effects
+        if hasattr(self, '_fullscreen_transition') and self._fullscreen_transition:
             return
 
         # In Floating Window (windowed) mode:
@@ -2220,6 +2337,8 @@ class OniPlayer(QMainWindow):
         if hasattr(self, 'timeline') and hasattr(self, 'volume_slider') and (self.timeline.isSliderDown() or self.volume_slider.isSliderDown()):
             in_bottom_area = True
 
+        # Aggressive auto-hide logic for fullscreen mode
+        # Always enforce hiding when not in hover areas to prevent ghost effects
         if in_top_area:
             if not self.top_control_container.isVisible():
                 self.top_control_container.show()
