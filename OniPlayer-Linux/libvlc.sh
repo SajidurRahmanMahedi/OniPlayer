@@ -2,7 +2,7 @@ sudo pacman -S --needed base-devel git libtool automake autoconf pkgconf gettext
 
 # git clone --depth 1 --branch 3.0.23 https://code.videolan.org/videolan/vlc.git
 
-unzip ./vlc.zip
+tar -xzf ./vlc.tar.gz
 
 cd vlc
 
@@ -27,5 +27,5 @@ python3 ./get_engine.py
 
 rm -rf vlc
 rm ./get_engine.py
-rm ./vlc.zip
+rm ./vlc.tar.gz
 rm -- "$0"
