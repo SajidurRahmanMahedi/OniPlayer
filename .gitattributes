@@ -31,6 +31,9 @@
 *.jar binary
 *.zip binary
 *.aar binary
+*.tar.gz binary
+*.tgz binary
+*.tar binary
 
 # Make sure Windows batch files keep CRLF endings for Windows execution
 *.bat text eol=crlf
