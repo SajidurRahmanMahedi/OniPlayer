@@ -1,4 +1,4 @@
-sudo pacman -S --needed base-devel git libtool automake autoconf pkgconf gettext flex bison lua ffmpeg tar qt6-base
+sudo pacman -Syu --needed base-devel git libtool automake autoconf pkgconf gettext flex bison lua ffmpeg tar qt6-base
 
 # git clone --depth 1 --branch 3.0.23 https://code.videolan.org/videolan/vlc.git
 
@@ -24,6 +24,8 @@ make -j$(nproc)
 cd ../..
 
 python3 ./get_engine.py
+
+sudo pacman -Syu
 
 rm -rf vlc
 rm ./get_engine.py
