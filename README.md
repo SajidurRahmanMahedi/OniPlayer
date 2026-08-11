@@ -36,7 +36,7 @@ Rather than compromising with generic wrapper players, OniPlayer has been engine
 | Feature | OniPlayer Android | OniPlayer Windows | OniPlayer Linux |
 | :--- | :--- | :--- | :--- |
 | **Language & Platform** | Kotlin / Native Android 15+ (API 35/36) | Python 3.10+ / PyQt6 on Windows x64 | Python 3.10+ / PyQt6 on Arch Linux |
-| **Core Media Engine** | LibVLC for Android (`3.7.0`) | LibVLC Binding (`python-vlc`) | Custom VLC 3.0.23 Build |
+| **Core Media Engine** | LibVLC for Android (`3.7.0`) | LibVLC for Windows (`3.0.21`) | LibVLC  for Linux (`3.0.23`) |
 | **User Interface** | Sleek Dark Mode (Sky-Blue & Netflix-Red Accent) | Minimalist Deep Dark, Fullscreen by Default | Minimalist Deep Dark, Fullscreen by Default |
 | **Touch Swipes & Gestures**| Brightness, Volume, 2-Finger Zoom, Slow Scrubbing | Volume Wheel, Hold + Wheel Seek / Track Swap | Volume Wheel, Hold + Wheel Seek / Track Swap |
 | **Keyboard Controls** | N/A | High-fidelity Hotkeys (Arrows, Space, PageUp/Dn, M, A, S) | High-fidelity Hotkeys (Arrows, Space, PageUp/Dn, M, A, S) |
