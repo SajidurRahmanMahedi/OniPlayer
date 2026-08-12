@@ -1,4 +1,4 @@
-# OniPlayer Desktop
+# OniPlayer Windows
 
 <p align="center">
   <strong>A minimal, keyboard-and-mouse-centric desktop media player built using PyQt6 and libvlc.</strong>
@@ -6,7 +6,7 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License Badge" />
-  <img src="https://img.shields.io/badge/Platform-Windows-blue?style=for-the-badge&logo=windows&logoColor=white" alt="Platform Badge" />
+  <img src="https://img.shields.io/badge/Platform-Windows-blue?style=for-the-badge&logo=data:image/svg%2bxml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA4OCA4OCI+PHBhdGggZmlsbD0iI2ZmZiIgZD0iTTAgMTIuNDAybDM1LjY4Ny00Ljg2LjAxNiAzNC44ODEtMzUuNjcwLjE5M3ptMzUuNjcgMzMuMzI3bC4wMjggMzQuOTUzLTM1LjY5OC00LjkwNC0uMDAzLTMwLjIyMnptNC43NzMtMzguOTIybDQ3LjU1Ny02LjgwN3Y0MS4xM2wtNDcuNTU3LjI3MnptNDcuNTU3IDM4LjM1OXY0MS4yMjlsLTQ3LjU1Ny02LjY4NS4wMTYtMzQuNzIxeiIvPjwvc3ZnPg==" alt="Platform Badge" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python Badge" />
   <img src="https://img.shields.io/badge/GUI-PyQt6-darkgreen?style=for-the-badge" alt="GUI Badge" />
 </p>
