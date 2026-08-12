@@ -22,7 +22,6 @@ else:
 vlc_engine_path = Path(base_dir) / "vlc_engine"
 vlc_lib_path = vlc_engine_path / "lib"
 vlc_plugin_path = vlc_engine_path / "plugins"
-icon_path = os.path.join(base_dir, 'icon.ico')
 
 # Set up VLC environment
 os.environ["VLC_PLUGIN_PATH"] = str(vlc_plugin_path)
@@ -270,6 +269,7 @@ class InWindowMenu(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
+        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)  # Don't steal focus from video frame
         self.setStyleSheet("""
             QFrame#InWindowMenu {
                 background-color: #1a1a1a;
@@ -504,6 +504,7 @@ class VideoFrame(QFrame):
         self.show_context = True  # Flag to control context menu display
         self.combination_active = False  # Track if we're in a button combination
         self.combination_start_time = QDateTime.currentMSecsSinceEpoch()  # Track when combination started
+        self.right_button_press_time = 0  # Track when right button was pressed
         
         # Button combination detection
         self.button_combination_timer = QTimer(self)
@@ -571,28 +572,32 @@ class VideoFrame(QFrame):
         if event.button() == Qt.MouseButton.LeftButton:
             self.left_button_pressed = True
             if self.right_button_pressed:
+                # Right button is already pressed, this is a right-hold-left-click
                 self.pending_button_combination = "right_hold_left"
                 self.button_combination_timer.start()
                 self.show_context = False
-                self.combination_active = True
         elif event.button() == Qt.MouseButton.RightButton:
             self.right_button_pressed = True
+            self.right_button_press_time = QDateTime.currentMSecsSinceEpoch()  # Track press time
             if self.left_button_pressed:
+                # Left button is already pressed, this is a left-hold-right-click
                 self.pending_button_combination = "left_hold_right"
                 self.button_combination_timer.start()
                 self.show_context = False
-                self.combination_active = True
             else:
-                self.show_context = True
+                # Initially block context menu to give time for combinations
+                self.show_context = False
+                # Start a timer to track if this is a hold
                 self.right_click_timer = QTimer(self)
                 self.right_click_timer.setSingleShot(True)
-                self.right_click_timer.setInterval(200)
+                self.right_click_timer.setInterval(200)  # 200ms threshold for hold
                 self.right_click_timer.timeout.connect(self.on_right_click_hold)
                 self.right_click_timer.start()
         elif event.button() == Qt.MouseButton.MiddleButton:
+            # Start a timer for middle button hold
             self.middle_click_timer = QTimer(self)
             self.middle_click_timer.setSingleShot(True)
-            self.middle_click_timer.setInterval(1000)
+            self.middle_click_timer.setInterval(1000)  # 1 second for subtitle toggle
             self.middle_click_timer.timeout.connect(self.on_middle_click_hold)
             self.middle_click_timer.start()
         super().mousePressEvent(event)
@@ -603,7 +608,9 @@ class VideoFrame(QFrame):
             if self.pending_button_combination:
                 self.button_combination_timer.stop()
                 self.pending_button_combination = None
+            # Only reset combination lock when both buttons are released
             if not self.right_button_pressed:
+                # Add a small delay before resetting combination lock
                 QTimer.singleShot(100, self.reset_combination_lock)
         elif event.button() == Qt.MouseButton.RightButton:
             self.right_button_pressed = False
@@ -612,13 +619,26 @@ class VideoFrame(QFrame):
             if self.pending_button_combination:
                 self.button_combination_timer.stop()
                 self.pending_button_combination = None
+            # Only reset combination lock when both buttons are released
             if not self.left_button_pressed:
+                # Check if the right button was held (timer expired) or quickly clicked
+                press_duration = QDateTime.currentMSecsSinceEpoch() - self.right_button_press_time
+                if press_duration <= 200 and not self.combination_active:
+                    # This was a quick right-click, show context menu
+                    self.show_context = True
+                    self.setCursor(Qt.CursorShape.ArrowCursor)
+                    self.update_audio_tracks()
+                    self.update_subtitle_tracks()
+                    self.context_menu.popup(self.cursor().pos())
+                # If it was held (>200ms), don't show context menu (already blocked by on_right_click_hold)
+                # Add a small delay before resetting combination lock
                 QTimer.singleShot(100, self.reset_combination_lock)
         elif event.button() == Qt.MouseButton.MiddleButton:
             if hasattr(self, 'middle_click_timer'):
+                # If timer is still running, it means this was a quick click
                 if self.middle_click_timer.isActive():
                     self.middle_click_timer.stop()
-                    self.parent.toggle_fullscreen()
+                    self.parent.toggle_fullscreen()  # Toggle fullscreen only on quick click
         super().mouseReleaseEvent(event)
 
     def reset_combination_lock(self):
@@ -635,16 +655,18 @@ class VideoFrame(QFrame):
                 return
 
             current_time = QDateTime.currentMSecsSinceEpoch()
-            time_since_combination = (
-                current_time - self.combination_start_time
-            )
+            time_since_right_press = current_time - self.right_button_press_time
+            time_since_combination = current_time - self.combination_start_time
 
-            # More permissive timing check - only block if we're actively in a combination
+            # Windows approach: use timing check to prevent context menu during/after combinations
+            # Also block if right button was just pressed (within 200ms) to allow time for combinations
             if (
                 self.show_context
                 and self.parent.has_media
                 and not self.pending_button_combination
                 and not self.combination_active
+                and time_since_combination > 200
+                and time_since_right_press > 200
             ):
                 print(f"[DEBUG] Opening context menu at {event.globalPos()}")
                 self.setCursor(Qt.CursorShape.ArrowCursor)
@@ -658,7 +680,7 @@ class VideoFrame(QFrame):
                 event.accept()
 
             else:
-                print(f"[DEBUG] Context menu blocked: show_context={self.show_context}, has_media={self.parent.has_media}, pending={self.pending_button_combination}, combination_active={self.combination_active}")
+                print(f"[DEBUG] Context menu blocked: show_context={self.show_context}, has_media={self.parent.has_media}, pending={self.pending_button_combination}, combination_active={self.combination_active}, time_since_combination={time_since_combination}, time_since_right_press={time_since_right_press}")
                 event.ignore()
 
         except Exception as e:
@@ -667,23 +689,15 @@ class VideoFrame(QFrame):
 
     def _on_context_menu_hide(self):
         """Handle context menu closing"""
-        # Reset button states to prevent wheel event from misbehaving
-        self.right_button_pressed = False
-        self.left_button_pressed = False
-        if hasattr(self, 'right_click_timer'):
-            self.right_click_timer.stop()
-        if hasattr(self, 'middle_click_timer'):
-            self.middle_click_timer.stop()
-        if hasattr(self, 'button_combination_timer'):
-            self.button_combination_timer.stop()
-        self.pending_button_combination = None
-        self.combination_active = False
-        self.show_context = True
+        # Restore focus to video frame so keyboard shortcuts work
+        self.setFocus()
         
-        # Restore cursor if not in control areas
+        # Get current mouse position relative to window
         cursor_pos = self.mapFromGlobal(self.cursor().pos())
         local_y = cursor_pos.y()
         window_height = self.parent.height()
+        
+        # Only hide cursor if not in control areas
         if not (local_y <= 30 or window_height - local_y <= 40):
             self.setCursor(Qt.CursorShape.BlankCursor)
 
@@ -911,23 +925,30 @@ class VideoFrame(QFrame):
                 return
         
         if self.left_button_pressed:
+            # Fast forward/rewind when left mouse button is pressed
             delta = event.angleDelta().y()
             if delta > 0:
-                self.parent.seek_relative(5)
+                self.parent.seek_relative(5)  # Fast forward 5 seconds
             else:
-                self.parent.seek_relative(-5)
+                self.parent.seek_relative(-5)  # Rewind 5 seconds
             event.accept()
         elif self.right_button_pressed:
+            # Prevent context menu from showing during right button hold + scroll
             self.show_context = False
+            # Change audio track when right mouse button is pressed
             delta = event.angleDelta().y()
             if delta > 0:
+                # Scroll up - go to previous audio track
                 self.parent.cycle_audio_track_reverse()
             else:
+                # Scroll down - go to next audio track
                 self.parent.cycle_audio_track()
             event.accept()
         else:
+            # Normal volume control when no buttons are pressed
             delta = event.angleDelta().y()
             if delta > 0:
+                # Increase volume directly
                 current_volume = self.parent.volume_slider.value()
                 new_volume = max(0, min(100, current_volume + 5))
                 if new_volume != current_volume:
@@ -935,6 +956,7 @@ class VideoFrame(QFrame):
                     self.parent.media_player.audio_set_volume(new_volume)
                     self.parent.show_volume_overlay()
             else:
+                # Decrease volume directly
                 current_volume = self.parent.volume_slider.value()
                 new_volume = max(0, min(100, current_volume - 5))
                 if new_volume != current_volume:
@@ -949,11 +971,15 @@ class VideoFrame(QFrame):
             self.parent.handle_mouse_hover()
 
     def on_right_click_hold(self):
-        self.show_context = False
+        """Called when right button is held for more than 200ms"""
+        self.show_context = False  # Disable context menu for hold
+        self.combination_active = True  # Prevent context menu from showing on release
+        self.combination_start_time = QDateTime.currentMSecsSinceEpoch()  # Set start time for timing check
 
     def on_middle_click_hold(self):
+        """Called when middle button is held for 1 second"""
         try:
-            self.parent.toggle_subtitles()
+            self.parent.toggle_subtitles()  # Use new toggle_subtitles method
         except Exception as e:
             print(f"Error in middle click hold: {e}")
 
@@ -1059,9 +1085,6 @@ class OniPlayer(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("OniPlayer")
-        
-        if os.path.exists(icon_path):
-            self.setWindowIcon(QIcon(icon_path))
         
         # Remove default window frame
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowSystemMenuHint | Qt.WindowType.WindowMinimizeButtonHint | Qt.WindowType.WindowCloseButtonHint)
@@ -2578,9 +2601,6 @@ class OniPlayer(QMainWindow):
 def main():
     app = QApplication(sys.argv)
     app.setStyle('Fusion')
-    
-    if os.path.exists(icon_path):
-        app.setWindowIcon(QIcon(icon_path))
 
     player = OniPlayer()
     
