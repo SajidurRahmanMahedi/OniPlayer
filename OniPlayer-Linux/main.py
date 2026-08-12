@@ -185,6 +185,7 @@ class _MenuRow(QWidget):
         self._hovered   = False
         self.setFixedHeight(self.ROW_H)
         self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
 
     def set_checked(self, v):
         self._checked = v
@@ -202,8 +203,10 @@ class _MenuRow(QWidget):
         super().leaveEvent(event)
 
     def mousePressEvent(self, event):
+        print(f"[DEBUG] _MenuRow mousePressEvent - button: {event.button()}, enabled: {self._enabled}, text: {self._text}")
         if event.button() == Qt.MouseButton.LeftButton and self._enabled:
             event.accept()
+            print(f"[DEBUG] _MenuRow clicked: {self._text}")
             self.clicked.emit()
         else:
             super().mousePressEvent(event)
@@ -266,6 +269,7 @@ class InWindowMenu(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
         self.setStyleSheet("""
             QFrame#InWindowMenu {
                 background-color: #1a1a1a;
@@ -307,9 +311,11 @@ class InWindowMenu(QFrame):
         self._scroll_area.setFrameShape(QFrame.Shape.NoFrame)
         self._scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self._scroll_area.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
+        self._scroll_area.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
 
         self._container = QWidget()
         self._container.setStyleSheet("background: transparent;")
+        self._container.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, False)
         self._vbox = QVBoxLayout(self._container)
         self._vbox.setContentsMargins(4, 4, 4, 4)
         self._vbox.setSpacing(0)
@@ -417,6 +423,7 @@ class InWindowMenu(QFrame):
         self._full_h = total_h
 
     def _on_action_click(self, action):
+        print(f"[DEBUG] _on_action_click called for: {action._text}, enabled: {action._enabled}")
         if not action._enabled:
             return
         self._close_root()          # hide everything first
@@ -424,6 +431,7 @@ class InWindowMenu(QFrame):
         self.triggered.emit(action)
 
     def _open_sub(self, row, sub):
+        print(f"[DEBUG] Opening submenu")
         if self._active_sub is sub and sub.isVisible():
             return
         self._close_active_sub()
@@ -495,7 +503,7 @@ class VideoFrame(QFrame):
         self.right_button_pressed = False
         self.show_context = True  # Flag to control context menu display
         self.combination_active = False  # Track if we're in a button combination
-        self.combination_start_time = 0  # Track when combination started
+        self.combination_start_time = QDateTime.currentMSecsSinceEpoch()  # Track when combination started
         
         # Button combination detection
         self.button_combination_timer = QTimer(self)
@@ -546,20 +554,17 @@ class VideoFrame(QFrame):
         self.pending_button_combination = None
 
     def mousePressEvent(self, event):
-        # Close the in-window menu if the click lands outside it.
-        if self.context_menu.isVisible():
-            gpos   = event.globalPosition().toPoint()
-            lpos   = self.mapFromGlobal(gpos)
+        # Close menu on left-click outside the menu area
+        if self.context_menu.isVisible() and event.button() == Qt.MouseButton.LeftButton:
+            gpos = event.globalPosition().toPoint()
+            lpos = self.mapFromGlobal(gpos)
             menu_r = self.context_menu.geometry()
-            sub    = self.context_menu._active_sub
-            sub_r  = sub.geometry() if (sub and sub.isVisible()) else QRect()
+            sub = self.context_menu._active_sub
+            sub_r = sub.geometry() if (sub and sub.isVisible()) else QRect()
             
-            # Check if click is outside both main menu and any visible submenu
+            # Only close if click is outside both main menu and submenu
             if not menu_r.contains(lpos) and not sub_r.contains(lpos):
                 self.context_menu._close_root()
-                # Consume the event to prevent reopening
-                if event.button() == Qt.MouseButton.RightButton:
-                    self.show_context = False
                 event.accept()
                 return
 
@@ -634,13 +639,14 @@ class VideoFrame(QFrame):
                 current_time - self.combination_start_time
             )
 
+            # More permissive timing check - only block if we're actively in a combination
             if (
                 self.show_context
                 and self.parent.has_media
                 and not self.pending_button_combination
                 and not self.combination_active
-                and time_since_combination > 200
             ):
+                print(f"[DEBUG] Opening context menu at {event.globalPos()}")
                 self.setCursor(Qt.CursorShape.ArrowCursor)
 
                 self.update_audio_tracks()
@@ -652,6 +658,7 @@ class VideoFrame(QFrame):
                 event.accept()
 
             else:
+                print(f"[DEBUG] Context menu blocked: show_context={self.show_context}, has_media={self.parent.has_media}, pending={self.pending_button_combination}, combination_active={self.combination_active}")
                 event.ignore()
 
         except Exception as e:
@@ -684,66 +691,63 @@ class VideoFrame(QFrame):
         self.context_menu.setStyleSheet("")   # no-op; InWindowMenu uses its own style
         
         play_action = self.context_menu.addAction("Play/Pause")
-        play_action.triggered.connect(self.parent.toggle_play)
+        play_action.triggered.connect(lambda: print("[DEBUG] Play/Pause triggered") or self.parent.toggle_play())
         
         fullscreen_action = self.context_menu.addAction("Toggle Fullscreen")
-        fullscreen_action.triggered.connect(self.parent.toggle_fullscreen)
+        fullscreen_action.triggered.connect(lambda: print("[DEBUG] Toggle Fullscreen triggered") or self.parent.toggle_fullscreen())
         
         self.context_menu.addSeparator()
         
         self.audio_tracks_menu = self.context_menu.addMenu("Audio Track")
-        self.audio_tracks_menu.setStyleSheet(self.context_menu.styleSheet())
         
         self.subtitle_tracks_menu = self.context_menu.addMenu("Subtitles")
-        self.subtitle_tracks_menu.setStyleSheet(self.context_menu.styleSheet())
         
         subtitle_sync_menu = self.context_menu.addMenu("Subtitle Sync")
-        subtitle_sync_menu.setStyleSheet(self.context_menu.styleSheet())
         
         delay_100ms = subtitle_sync_menu.addAction("Delay +100ms")
-        delay_100ms.triggered.connect(lambda: self.parent.adjust_subtitle_sync(100))
+        delay_100ms.triggered.connect(lambda: print("[DEBUG] Delay +100ms triggered") or self.parent.adjust_subtitle_sync(100))
         delay_500ms = subtitle_sync_menu.addAction("Delay +500ms")
-        delay_500ms.triggered.connect(lambda: self.parent.adjust_subtitle_sync(500))
+        delay_500ms.triggered.connect(lambda: print("[DEBUG] Delay +500ms triggered") or self.parent.adjust_subtitle_sync(500))
         delay_1000ms = subtitle_sync_menu.addAction("Delay +1s")
-        delay_1000ms.triggered.connect(lambda: self.parent.adjust_subtitle_sync(1000))
+        delay_1000ms.triggered.connect(lambda: print("[DEBUG] Delay +1s triggered") or self.parent.adjust_subtitle_sync(1000))
         
         subtitle_sync_menu.addSeparator()
         
         advance_100ms = subtitle_sync_menu.addAction("Advance -100ms")
-        advance_100ms.triggered.connect(lambda: self.parent.adjust_subtitle_sync(-100))
+        advance_100ms.triggered.connect(lambda: print("[DEBUG] Advance -100ms triggered") or self.parent.adjust_subtitle_sync(-100))
         advance_500ms = subtitle_sync_menu.addAction("Advance -500ms")
-        advance_500ms.triggered.connect(lambda: self.parent.adjust_subtitle_sync(-500))
+        advance_500ms.triggered.connect(lambda: print("[DEBUG] Advance -500ms triggered") or self.parent.adjust_subtitle_sync(-500))
         advance_1000ms = subtitle_sync_menu.addAction("Advance -1s")
-        advance_1000ms.triggered.connect(lambda: self.parent.adjust_subtitle_sync(-1000))
+        advance_1000ms.triggered.connect(lambda: print("[DEBUG] Advance -1s triggered") or self.parent.adjust_subtitle_sync(-1000))
         
         subtitle_sync_menu.addSeparator()
         
         reset_sync = subtitle_sync_menu.addAction("Reset Sync")
-        reset_sync.triggered.connect(lambda: self.parent.reset_subtitle_sync())
+        reset_sync.triggered.connect(lambda: print("[DEBUG] Reset Sync triggered") or self.parent.reset_subtitle_sync())
         
         self.context_menu.addSeparator()
         
         open_action = self.context_menu.addAction("Open File...")
-        open_action.triggered.connect(self.parent.open_file)
+        open_action.triggered.connect(lambda: print("[DEBUG] Open File triggered") or self.parent.open_file())
         
         self.context_menu.addSeparator()
         
         prev_action = self.context_menu.addAction("Previous Video")
-        prev_action.triggered.connect(lambda: self.parent.play_previous())
+        prev_action.triggered.connect(lambda: print("[DEBUG] Previous Video triggered") or self.parent.play_previous())
         next_action = self.context_menu.addAction("Next Video")
-        next_action.triggered.connect(lambda: self.parent.play_next())
+        next_action.triggered.connect(lambda: print("[DEBUG] Next Video triggered") or self.parent.play_next())
         
         self.context_menu.addSeparator()
         
         seek_menu = self.context_menu.addMenu("Seek")
         back_10 = seek_menu.addAction("Back 10 seconds")
-        back_10.triggered.connect(lambda: self.parent.seek_relative(-10))
+        back_10.triggered.connect(lambda: print("[DEBUG] Back 10s triggered") or self.parent.seek_relative(-10))
         forward_10 = seek_menu.addAction("Forward 10 seconds")
-        forward_10.triggered.connect(lambda: self.parent.seek_relative(10))
+        forward_10.triggered.connect(lambda: print("[DEBUG] Forward 10s triggered") or self.parent.seek_relative(10))
         back_30 = seek_menu.addAction("Back 30 seconds")
-        back_30.triggered.connect(lambda: self.parent.seek_relative(-30))
+        back_30.triggered.connect(lambda: print("[DEBUG] Back 30s triggered") or self.parent.seek_relative(-30))
         forward_30 = seek_menu.addAction("Forward 30 seconds")
-        forward_30.triggered.connect(lambda: self.parent.seek_relative(30))
+        forward_30.triggered.connect(lambda: print("[DEBUG] Forward 30s triggered") or self.parent.seek_relative(30))
 
     def update_audio_tracks(self):
         if not self.audio_tracks_menu:
@@ -893,6 +897,19 @@ class VideoFrame(QFrame):
             super().mouseDoubleClickEvent(event)
 
     def wheelEvent(self, event):
+        # Check if mouse is over context menu - if so, let the menu handle scrolling
+        if self.context_menu.isVisible():
+            gpos = event.globalPosition().toPoint()
+            lpos = self.mapFromGlobal(gpos)
+            menu_r = self.context_menu.geometry()
+            sub = self.context_menu._active_sub
+            sub_r = sub.geometry() if (sub and sub.isVisible()) else QRect()
+            
+            # If wheel event is over menu or submenu, ignore it (let menu scroll)
+            if menu_r.contains(lpos) or sub_r.contains(lpos):
+                event.ignore()
+                return
+        
         if self.left_button_pressed:
             delta = event.angleDelta().y()
             if delta > 0:
@@ -2246,25 +2263,7 @@ class OniPlayer(QMainWindow):
         self.timer.start()
 
     def eventFilter(self, watched, event):
-        # Handle context menu closing on clicks outside
-        if event.type() == QEvent.Type.MouseButtonPress:
-            if hasattr(self, 'video_frame') and hasattr(self.video_frame, 'context_menu'):
-                if self.video_frame.context_menu.isVisible():
-                    # Simple check: if click is not in the menu widgets, close it
-                    is_menu_widget = (watched == self.video_frame.context_menu or 
-                                    watched == self.video_frame.context_menu._scroll_area or
-                                    watched == self.video_frame.context_menu._container)
-                    
-                    # Check submenu
-                    sub = self.video_frame.context_menu._active_sub
-                    if sub and sub.isVisible():
-                        is_menu_widget = is_menu_widget or (watched == sub or 
-                                                            watched == sub._scroll_area or 
-                                                            watched == sub._container)
-                    
-                    if not is_menu_widget:
-                        self.video_frame.context_menu._close_root()
-                        return True
+        # Removed menu closing logic - let VideoFrame handle it in mousePressEvent
         
         if event.type() in (
             QEvent.Type.MouseMove,
