@@ -38,8 +38,8 @@ active_env/
 # VLC build artifacts (temporary)
 vlc/
 
-# VLC plugins cache file
-vlc_engine/plugins/plugins.dat
+# VLC_engine
+vlc_engine/
 
 # IDE files created by editors inside this folder
 .vscode/
