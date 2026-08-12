@@ -9,6 +9,7 @@
   <img src="https://img.shields.io/badge/Platform-Arch%20Linux-blue?style=for-the-badge&logo=archlinux&logoColor=white" alt="Platform Badge" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python Badge" />
   <img src="https://img.shields.io/badge/GUI-PyQt6-darkgreen?style=for-the-badge" alt="GUI Badge" />
+  <img src="https://img.shields.io/badge/Core%20Engine-LibVLC%203.0.23-orange?style=for-the-badge&logo=vlc&logoColor=white" alt="VLC Badge" />
   <img src="https://img.shields.io/badge/Graphics-X11%20%2F%20Wayland-orange?style=for-the-badge" alt="Graphics Badge" />
 </p>
 
