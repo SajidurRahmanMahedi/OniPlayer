@@ -555,6 +555,11 @@ class VideoFrame(QFrame):
 
     def handle_button_combination(self):
         """Handle button combinations after the timeout"""
+        # Only trigger combinations if media is currently playing
+        if not self.parent.has_media:
+            self.pending_button_combination = None
+            return
+            
         if self.pending_button_combination == "right_hold_left":
             self.parent.play_previous()
             self.combination_active = True
@@ -1708,24 +1713,12 @@ class OniPlayer(QMainWindow):
         # Show logo overlay when no video is playing
         self.video_frame.logo_overlay.show()
         
-        # Exit fullscreen mode when no video is playing
-        if self.isFullScreen():
-            self.showNormal()
-            if hasattr(self, 'prev_geometry'):
-                self.setGeometry(self.prev_geometry)
-            
+        # Preserve current window mode (fullscreen or floating window)
+        # Only show controls if in floating window mode
+        if not self.isFullScreen():
             self.top_control_container.show()
             self.timeline_container.show()
             self.main_layout.setContentsMargins(0, 30, 0, 40)
-            
-            # Force immediate geometry update
-            self.update_control_positions()
-            
-            # Force complete repaint sequence
-            self.top_control_container.repaint()
-            self.timeline_container.repaint()
-            self.video_frame.repaint()
-            self.repaint()
         
         # Show cursor when resetting to default UI
         if hasattr(self, 'video_frame'):
