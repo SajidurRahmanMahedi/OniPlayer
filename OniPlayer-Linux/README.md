@@ -186,10 +186,10 @@ First, ensure the VLC engine is built and available:
 ### Compile to Executable (`PyInstaller`)
 To bundle the application into a standalone binary:
 ```bash
-pyinstaller --noconfirm --onedir --windowed --icon "icon.ico" --name "OniPlayer" main.py
+pyinstaller --noconfirm --onedir --windowed --name "oniplayer" main.py
 ```
 
-The compiled application will be in the `dist/OniPlayer` directory. The bundled VLC engine (`vlc_engine/`) will be included automatically.
+The compiled application will be in the `dist/oniplayer` directory. The bundled VLC engine (`vlc_engine/`) will be included automatically.
 
 ### System Integration
 For system-wide installation, you can create a desktop entry:
