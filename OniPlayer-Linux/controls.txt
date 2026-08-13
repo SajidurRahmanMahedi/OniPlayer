@@ -1,0 +1,78 @@
+OniPlayer Controls Guide
+====================
+
+Keyboard Controls
+---------------
+Playback:
+- Space: Play/Pause
+- Enter: Toggle fullscreen
+- F: Toggle fullscreen
+- Left Arrow: Seek backward
+- Right Arrow: Seek forward
+- Up Arrow: Volume up
+- Down Arrow: Volume down
+- M: Toggle mute
+- Esc: Exit full screen
+- Page Up: Next video
+- Page Down: Previous video
+- A: Cycle to next audio track
+- S: Toggle subtitles on/off
+
+Mouse Controls
+------------
+Playback:
+- Left button Double-click: Play/Pause
+- Middle-click: Toggle full screen
+- Hold middle-click (1 second): Toggle subtitles on/off
+- Right-click: Show context menu
+- Scroll wheel: Adjust volume
+- Left click + scroll: Fast forward/rewind
+- Right click + scroll: Change audio track (up/down)
+- Click and drag timeline: Seek through video
+- Hold left-button + Single-click right-button: Next video
+- Hold right-button + Single-click left-button: Previous video
+
+Additional Features
+----------------
+- Full screen mode is the default mode
+- Mouse cursor will not appear on the video screen
+- Cursor will appear when the context menu is open
+- Cursor will appear if hover the cursor on the timeline or title bar
+
+Context Menu (Right-Click)
+------------------------
+Playback:
+- Play/Pause
+- Next Video
+- Previous Video
+- Toggle Fullscreen
+- Audio Selection
+- Subtitle Selction
+- Sync Subtitle
+
+Audio:
+- Select Audio Track
+- Toggle Mute
+- Volume Control
+
+Subtitles:
+- Select Subtitle Track
+- Subtitle Sync Adjustment
+- Disable Subtitles
+
+Timeline Controls
+---------------
+- Click anywhere on timeline to jump to that position
+- Drag timeline slider for precise seeking
+- Hover over timeline to preview time position
+- Current time and total duration displayed
+
+Volume Controls
+-------------
+- Click volume icon to toggle mute
+- Drag volume slider to adjust volume
+- Volume level indicator appears when changing volume
+- Last volume level is remembered when unmuting
+- Use mouse scroll wheel to adjust volume
+
+
