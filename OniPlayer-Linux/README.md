@@ -142,6 +142,28 @@ OniPlayer is designed to be fully controlled via keyboard shortcuts and advanced
    python main.py
    ```
 
+### System-Wide Installation
+
+For a complete system-wide installation available to all users, use the provided installation script:
+
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+**Important:** The installation script must be run **after** completing the VLC engine build with `libvlc.sh`.
+
+The `install.sh` script performs the following:
+- Creates a Python virtual environment and installs dependencies
+- Builds the application using PyInstaller as a single executable
+- Installs the VLC engine to `/usr/local/lib/vlc_engine/` (system-wide access)
+- Installs the compiled binary to `/usr/local/bin/oniplayer`
+- Sets up proper permissions for system-wide access
+- Creates a desktop entry for application menu integration
+- Installs the application icon
+
+After installation, OniPlayer can be launched from anywhere by running `oniplayer` or through the desktop application menu.
+
 ### Graphics Stack Compatibility
 
 OniPlayer Linux is designed to work with both X11 and Wayland:

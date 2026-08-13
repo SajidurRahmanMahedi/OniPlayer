@@ -14,7 +14,7 @@ os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 # Set up base directory for all resources
 if getattr(sys, 'frozen', False):
-    base_dir = os.path.dirname(sys.executable)
+    base_dir = os.path.join('/usr', 'local', 'lib')
 else:
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
@@ -493,7 +493,7 @@ class VideoFrame(QFrame):
         self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         self.setAttribute(Qt.WidgetAttribute.WA_DontCreateNativeAncestors, True)
         self.setAttribute(Qt.WidgetAttribute.WA_NativeWindow, True)
-        self.setAttribute(Qt.WidgetAttribute.WA_PaintOnScreen, True)
+        self.setAttribute(Qt.WidgetAttribute.WA_PaintOnScreen, True)  # Keep for VLC compatibility
         self.setAttribute(Qt.WidgetAttribute.WA_StaticContents, True)
         self.setAttribute(Qt.WidgetAttribute.WA_NoChildEventsForParent, True)
         self.setAttribute(Qt.WidgetAttribute.WA_UpdatesDisabled, True)
@@ -536,11 +536,22 @@ class VideoFrame(QFrame):
         self.setup_context_menu()
         self.context_menu.aboutToHide.connect(self._on_context_menu_hide)
         
-        # Add logo text
-        self.logo_text = "OniPlayer"
+        # Create logo overlay widget for when no video is playing
+        self.logo_overlay = QLabel(self)
+        self.logo_overlay.setText("OniPlayer")
         self.logo_font = self.font()
         self.logo_font.setPointSize(28)
         self.logo_font.setBold(True)
+        self.logo_overlay.setFont(self.logo_font)
+        self.logo_overlay.setStyleSheet("color: rgba(200, 200, 200, 255);")
+        self.logo_overlay.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.logo_overlay.hide()
+        
+        # Position logo overlay to center it
+        self.logo_overlay.setGeometry(0, 0, 100, 50)
+        
+        # Show logo initially (no video is playing)
+        self.logo_overlay.show()
 
     def handle_button_combination(self):
         """Handle button combinations after the timeout"""
@@ -1043,20 +1054,15 @@ class VideoFrame(QFrame):
             super().keyPressEvent(event)
 
     def paintEvent(self, event):
-        if not self.parent.has_media:
-            super().paintEvent(event)
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setFont(self.logo_font)
-            text_rect = painter.fontMetrics().boundingRect(self.logo_text)
-            x = (self.width() - text_rect.width()) // 2
-            y = (self.height() - text_rect.height()) // 2
-            
-            painter.setPen(QPen(QColor(0, 0, 0, 60)))
-            painter.drawText(x + 1, y + text_rect.height() + 1, self.logo_text)
-            
-            painter.setPen(QPen(QColor(100, 100, 100)))
-            painter.drawText(x, y + text_rect.height(), self.logo_text)
+        # No custom painting needed - using overlay widget instead
+        super().paintEvent(event)
+    
+    def resizeEvent(self, event):
+        """Handle resize events to keep logo centered"""
+        super().resizeEvent(event)
+        if hasattr(self, 'logo_overlay'):
+            # Make overlay cover entire video frame
+            self.logo_overlay.setGeometry(0, 0, self.width(), self.height())
 
 class StrokedLabel(QLabel):
     def paintEvent(self, event):
@@ -1237,6 +1243,13 @@ class OniPlayer(QMainWindow):
         self.resize(1024, 768)
         self.show()
         self.update_control_positions()
+        
+        # Force cursor update to ensure it's set to blank cursor
+        # This fixes the issue where the cursor stays in its previous state (e.g., text icon)
+        # from other applications when the player opens
+        QTimer.singleShot(50, self.force_cursor_update)
+        QTimer.singleShot(200, self.force_cursor_update)
+        QTimer.singleShot(500, self.force_cursor_update)
         
         # Timeline container layout
         timeline_layout = QHBoxLayout(self.timeline_container)
@@ -1509,6 +1522,9 @@ class OniPlayer(QMainWindow):
         # Fullscreen transition flag to prevent ghost effects
         self._fullscreen_transition = False
 
+        # Start in fullscreen mode by default
+        QTimer.singleShot(100, self.toggle_fullscreen)
+
 
 
     def check_subtitle_tracks(self):
@@ -1673,8 +1689,51 @@ class OniPlayer(QMainWindow):
 
     def on_media_end(self, event):
         self.has_media = False
-        self.video_frame.update()
+        self.video_frame.logo_overlay.show()
         QTimer.singleShot(0, self.play_next)
+
+    def reset_to_default_ui(self):
+        """Reset the player to default UI state when no video is playing"""
+        self.media_player.stop()
+        self.has_media = False
+        self.current_file = None
+        self.timeline.setValue(0)
+        self.time_label.setText("0:00")
+        self.duration_label.setText("/ 0:00")
+        self.title_label.setText("OniPlayer")
+        self.setWindowTitle("OniPlayer")
+        self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
+        self.timer.stop()
+        
+        # Show logo overlay when no video is playing
+        self.video_frame.logo_overlay.show()
+        
+        # Exit fullscreen mode when no video is playing
+        if self.isFullScreen():
+            self.showNormal()
+            if hasattr(self, 'prev_geometry'):
+                self.setGeometry(self.prev_geometry)
+            
+            self.top_control_container.show()
+            self.timeline_container.show()
+            self.main_layout.setContentsMargins(0, 30, 0, 40)
+            
+            # Force immediate geometry update
+            self.update_control_positions()
+            
+            # Force complete repaint sequence
+            self.top_control_container.repaint()
+            self.timeline_container.repaint()
+            self.video_frame.repaint()
+            self.repaint()
+        
+        # Show cursor when resetting to default UI
+        if hasattr(self, 'video_frame'):
+            self.video_frame.setCursor(Qt.CursorShape.ArrowCursor)
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        
+        # Repaint video frame to show default logo
+        self.video_frame.update()
 
     def on_length_changed(self, event):
         length = self.media_player.get_length()
@@ -1684,6 +1743,20 @@ class OniPlayer(QMainWindow):
     def on_media_changed(self, event):
         QTimer.singleShot(100, self.adjust_window_to_video_size)
         QTimer.singleShot(200, self.refresh_cursor)
+
+    def force_cursor_update(self):
+        """Force cursor to blank cursor to fix cursor state from other applications"""
+        try:
+            # Force the cursor to blank cursor immediately
+            self.video_frame.setCursor(Qt.CursorShape.BlankCursor)
+            # Temporarily set to arrow cursor to force a cursor change
+            self.video_frame.setCursor(Qt.CursorShape.ArrowCursor)
+            # Then back to blank cursor
+            QTimer.singleShot(10, lambda: self.video_frame.setCursor(Qt.CursorShape.BlankCursor))
+            # Then apply the correct cursor based on position
+            QTimer.singleShot(20, self.refresh_cursor)
+        except Exception as e:
+            print(f"Error forcing cursor update: {e}")
 
     def refresh_cursor(self):
         try:
@@ -1705,16 +1778,9 @@ class OniPlayer(QMainWindow):
 
     def play_next(self):
         try:
+            # Check if there are more videos to play
             if not self.playlist or len(self.playlist) <= 1:
-                self.media_player.stop()
-                self.has_media = False
-                self.current_file = None
-                self.timeline.setValue(0)
-                self.time_label.setText("0:00")
-                self.duration_label.setText("/ 0:00")
-                self.title_label.setText("OniPlayer")
-                self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
-                self.video_frame.update()
+                self.reset_to_default_ui()
                 return
                 
             was_fullscreen = self.isFullScreen()
@@ -1725,15 +1791,7 @@ class OniPlayer(QMainWindow):
             
             next_index = self.current_index + 1
             if next_index >= len(self.playlist):
-                self.media_player.stop()
-                self.has_media = False
-                self.current_file = None
-                self.timeline.setValue(0)
-                self.time_label.setText("0:00")
-                self.duration_label.setText("/ 0:00")
-                self.title_label.setText("OniPlayer")
-                self.play_button.setIcon(timeline_icon(self.style(), QStyle.StandardPixmap.SP_MediaPlay))
-                self.video_frame.update()
+                self.reset_to_default_ui()
                 return
             
             self.current_index = next_index
@@ -1900,6 +1958,9 @@ class OniPlayer(QMainWindow):
 
             self.has_media = True
             self.current_file = filename
+            
+            # Hide logo overlay when video is playing
+            self.video_frame.logo_overlay.hide()
 
             self.adjust_window_to_video_size()
 
@@ -2014,6 +2075,12 @@ class OniPlayer(QMainWindow):
         self.timeline_container.repaint()
         self.video_frame.repaint()
         self.update()
+        
+        # Update logo overlay visibility based on media state
+        if self.has_media:
+            self.video_frame.logo_overlay.hide()
+        else:
+            self.video_frame.logo_overlay.show()
 
     def set_position(self, position):
         if self.has_media:
@@ -2316,9 +2383,36 @@ class OniPlayer(QMainWindow):
             if not self.timeline_container.isVisible():
                 self.timeline_container.show()
 
-            if hasattr(self, 'video_frame'):
-                self.video_frame.setCursor(Qt.CursorShape.ArrowCursor)
-            self.setCursor(Qt.CursorShape.ArrowCursor)
+            # Check if cursor is over control areas
+            global_pos = QCursor.pos()
+            local_pos = self.mapFromGlobal(global_pos)
+            x = local_pos.x()
+            y = local_pos.y()
+            win_w = self.width()
+            win_h = self.height()
+
+            top_threshold = 30
+            bottom_threshold = 40
+
+            in_top_area = (y <= top_threshold)
+            in_bottom_area = (win_h - y <= bottom_threshold)
+
+            # If context menu is open, show cursor
+            if hasattr(self, 'video_frame') and hasattr(self.video_frame, 'context_menu') and self.video_frame.context_menu.isVisible():
+                if hasattr(self, 'video_frame'):
+                    self.video_frame.setCursor(Qt.CursorShape.ArrowCursor)
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+                return
+
+            # Show cursor only when hovering over control areas
+            if in_top_area or in_bottom_area:
+                if hasattr(self, 'video_frame'):
+                    self.video_frame.setCursor(Qt.CursorShape.ArrowCursor)
+                self.setCursor(Qt.CursorShape.ArrowCursor)
+            else:
+                if hasattr(self, 'video_frame'):
+                    self.video_frame.setCursor(Qt.CursorShape.BlankCursor)
+                self.setCursor(Qt.CursorShape.BlankCursor)
             return
 
         # If window is currently being dragged by titlebar
@@ -2359,8 +2453,7 @@ class OniPlayer(QMainWindow):
         if hasattr(self, 'timeline') and hasattr(self, 'volume_slider') and (self.timeline.isSliderDown() or self.volume_slider.isSliderDown()):
             in_bottom_area = True
 
-        # Aggressive auto-hide logic for fullscreen mode
-        # Always enforce hiding when not in hover areas to prevent ghost effects
+        # Auto-hide logic for fullscreen mode
         if in_top_area:
             if not self.top_control_container.isVisible():
                 self.top_control_container.show()
