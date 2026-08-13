@@ -58,33 +58,15 @@ print_info() {
 check_dependencies() {
     print_header "Checking Dependencies"
     
-    local missing_deps=()
-    
-    # Check for Python 3
+    # Only check for Python 3 - venv will handle pip and pyinstaller
     if ! command -v python3 &> /dev/null; then
-        missing_deps+=("python3")
-    fi
-    
-    # Check for pip
-    if ! command -v pip3 &> /dev/null && ! python3 -m pip --version &> /dev/null; then
-        missing_deps+=("pip3")
-    fi
-    
-    # Check for PyInstaller
-    if ! command -v pyinstaller &> /dev/null && ! python3 -m PyInstaller --version &> /dev/null; then
-        missing_deps+=("pyinstaller")
-    fi
-    
-    if [ ${#missing_deps[@]} -ne 0 ]; then
-        print_error "Missing dependencies: ${missing_deps[*]}"
-        print_info "Please install missing dependencies:"
-        for dep in "${missing_deps[@]}"; do
-            echo "  - $dep"
-        done
+        print_error "Python 3 is required but not found"
+        print_info "Please install Python 3:"
+        echo "  sudo pacman -S python3"
         exit 1
     fi
     
-    print_success "All dependencies are installed"
+    print_success "Python 3 is installed"
 }
 
 check_sudo() {
@@ -216,6 +198,9 @@ install_dependencies() {
     print_header "Installing Python Dependencies"
     
     source "$VENV_DIR/bin/activate"
+    
+    # Install pip and setuptools first
+    pip install --upgrade pip setuptools
     
     if [ -f "requirements.txt" ]; then
         pip install -r requirements.txt
