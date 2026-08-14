@@ -31,19 +31,13 @@ trap 'echo "==> Interrupted."; exit 130' INT TERM
 echo "==> Installing build dependencies..."
 
 sudo pacman -S --needed \
-    base-devel \
-    git \
-    libtool \
-    automake \
-    autoconf \
-    pkgconf \
-    gettext \
-    flex \
-    bison \
-    lua \
+    freetype2 \
+    fontconfig \
+    fribidi \
+    harfbuzz \
+    libass \
     ffmpeg \
-    tar \
-    qt6-base
+    lua
 
 echo "==> Extracting VLC source..."
 
