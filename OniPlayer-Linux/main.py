@@ -1457,14 +1457,18 @@ class OniPlayer(QMainWindow):
         self.setAcceptDrops(True)
         
         # Initialize VLC engine instance for Linux.
-        # Minimal VLC configuration for subtitle support:
+        # Configuration for subtitle support:
         # --no-xvideo: Disable XV overlay to ensure subtitles render properly
         # --vout=x11: Use X11 video output for better subtitle support
         # --no-video-title-show: Disable video title overlay
+        # --sub-source=freetype: Enable freetype font rendering for subtitles
+        # --sub-fuzziness=1: Allow fuzzy subtitle matching
         instance_args = [
             "--no-xvideo",
             "--vout=x11",
-            "--no-video-title-show"
+            "--no-video-title-show",
+            "--sub-source=freetype",
+            "--sub-fuzziness=1"
         ]
         self.instance = vlc.Instance(instance_args)
         

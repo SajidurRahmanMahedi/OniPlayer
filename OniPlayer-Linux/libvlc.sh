@@ -32,6 +32,7 @@ echo "==> Installing build dependencies..."
 
 sudo pacman -Syu --needed \
     base-devel \
+    git \
     libtool \
     automake \
     autoconf \
@@ -45,10 +46,13 @@ sudo pacman -Syu --needed \
     qt6-base \
     freetype2 \
     fontconfig \
-    fribidi \
     harfbuzz \
     libass \
-    git
+    fribidi \
+    libxml2 \
+    libx11 \
+    libxext \
+    libxpm
 
 echo "==> Extracting VLC source..."
 
@@ -73,7 +77,15 @@ cd build
     --disable-skins2 \
     --enable-shared \
     --disable-static \
-    --disable-gst-decode
+    --disable-gst-decode \
+    --enable-freetype \
+    --enable-fontconfig \
+    --enable-harfbuzz \
+    --enable-libass \
+    --enable-fribidi \
+    --enable-spu \
+    --enable-subtitle \
+    --with-libass
 
 echo "==> Building VLC..."
 
