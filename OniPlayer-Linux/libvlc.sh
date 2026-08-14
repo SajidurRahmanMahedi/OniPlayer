@@ -30,7 +30,7 @@ trap 'echo "==> Interrupted."; exit 130' INT TERM
 
 echo "==> Installing build dependencies..."
 
-sudo pacman -Syu --needed \
+sudo pacman -S --needed \
     base-devel \
     git \
     libtool \
