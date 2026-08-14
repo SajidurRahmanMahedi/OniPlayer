@@ -47,7 +47,8 @@ sudo pacman -Syu --needed \
     fontconfig \
     fribidi \
     harfbuzz \
-    libass
+    libass \
+    git
 
 echo "==> Extracting VLC source..."
 
