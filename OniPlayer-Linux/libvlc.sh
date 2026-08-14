@@ -33,6 +33,7 @@ echo "==> Installing build dependencies..."
 sudo pacman -Syu --needed \
     base-devel \
     git \
+    vlc \
     libtool \
     automake \
     autoconf \
