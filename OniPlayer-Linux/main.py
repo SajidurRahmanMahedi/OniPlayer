@@ -1466,7 +1466,7 @@ class OniPlayer(QMainWindow):
             "--no-xvideo",
             "--vout=x11",
             "--no-video-title-show",
-            "--sub-source=freetype"
+            "--sub-source=freetype",
         ]
         self.instance = vlc.Instance(instance_args)
         
