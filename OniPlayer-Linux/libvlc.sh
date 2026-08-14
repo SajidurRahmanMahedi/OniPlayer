@@ -37,7 +37,8 @@ sudo pacman -S --needed \
     harfbuzz \
     libass \
     ffmpeg \
-    lua
+    lua \
+    tar
 
 echo "==> Extracting VLC source..."
 
