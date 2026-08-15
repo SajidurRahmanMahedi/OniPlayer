@@ -5,7 +5,6 @@
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License Badge" />
   <img src="https://img.shields.io/badge/Platform-Arch%20Linux-blue?style=for-the-badge&logo=archlinux&logoColor=white" alt="Platform Badge" />
   <img src="https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white" alt="Python Badge" />
   <img src="https://img.shields.io/badge/GUI-PyQt6-darkgreen?style=for-the-badge" alt="GUI Badge" />
