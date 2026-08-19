@@ -1,6 +1,8 @@
+#!/usr/bin/env bash
+
 # git clone --depth 1 --branch 3.0.23 https://code.videolan.org/videolan/vlc.git
 
-#!/usr/bin/env bash
+SCRIPT_PATH="$(realpath "$0")"
 
 set -Eeuo pipefail
 
@@ -105,3 +107,6 @@ sudo pacman -Syu
 cleanup
 
 echo "==> Done."
+
+rm -f -- "$SCRIPT_PATH"
+
