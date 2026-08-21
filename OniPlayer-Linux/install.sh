@@ -274,7 +274,7 @@ create_desktop_entry() {
 [Desktop Entry]
 Name=OniPlayer
 GenericName=Video Player
-Comment=Full-featured Video Player for Linux
+Comment=Full-featured Video Player
 Exec=$INSTALL_DIR/$BINARY_NAME %F
 Icon=$ICON_DIR/$ICON_NAME
 Type=Application
