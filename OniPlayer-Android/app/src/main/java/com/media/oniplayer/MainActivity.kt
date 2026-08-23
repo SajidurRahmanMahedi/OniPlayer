@@ -14,6 +14,7 @@ import android.util.TypedValue
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.provider.DocumentsContract
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Context
@@ -407,17 +408,18 @@ class MainActivity : AppCompatActivity() {
 
         if (action == Intent.ACTION_VIEW && data != null) {
             android.util.Log.d("OniPlayer", "Received VIEW intent: $data")
+            android.util.Log.d("OniPlayer", "Intent scheme: ${data.scheme}, authority: ${data.authority}")
             
             // Convert URI to file path
             val filePath = getPathFromUri(data)
             if (filePath != null) {
-                android.util.Log.d("OniPlayer", "File path: $filePath")
+                android.util.Log.d("OniPlayer", "File path resolved: $filePath")
                 
-                // Wait for videos to load, then play the requested video
-                handler.postDelayed({
-                    playVideoFromPath(filePath)
-                }, 1000)
+                // Try to play immediately, if videos are loaded it will work
+                // If not loaded yet, it will still work for direct playback
+                playVideoFromPath(filePath)
             } else {
+                android.util.Log.e("OniPlayer", "Failed to resolve file path from URI: $data")
                 Toast.makeText(this, "Unable to open video file", Toast.LENGTH_LONG).show()
             }
         }
@@ -427,17 +429,178 @@ class MainActivity : AppCompatActivity() {
         return when (uri.scheme) {
             "file" -> uri.path
             "content" -> {
-                val projection = arrayOf(android.provider.MediaStore.Video.Media.DATA)
-                val cursor = contentResolver.query(uri, projection, null, null, null)
-                cursor?.use {
-                    val columnIndex = it.getColumnIndexOrThrow(android.provider.MediaStore.Video.Media.DATA)
-                    if (it.moveToFirst()) {
-                        it.getString(columnIndex)
-                    } else null
-                }
+                // Try multiple methods to get the file path from content URI
+                getPathFromContentUri(uri)
             }
             else -> null
         }
+    }
+
+    private fun getPathFromContentUri(uri: Uri): String? {
+        // Method 1: Try MediaStore DATA column (works for most content URIs)
+        val projection = arrayOf(android.provider.MediaStore.Video.Media.DATA)
+        val cursor = contentResolver.query(uri, projection, null, null, null)
+        cursor?.use {
+            val columnIndex = it.getColumnIndexOrThrow(android.provider.MediaStore.Video.Media.DATA)
+            if (it.moveToFirst()) {
+                val path = it.getString(columnIndex)
+                if (path != null && File(path).exists()) {
+                    android.util.Log.d("OniPlayer", "Got path from MediaStore DATA: $path")
+                    return path
+                }
+            }
+        }
+
+        // Method 2: Try using _ID to find the file path (works for download manager URIs)
+        val id = uri.lastPathSegment?.toLongOrNull()
+        if (id != null) {
+            try {
+                val selection = "${android.provider.MediaStore.Video.Media._ID} = ?"
+                val selectionArgs = arrayOf(id.toString())
+                val cursor2 = contentResolver.query(
+                    android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI,
+                    arrayOf(android.provider.MediaStore.Video.Media.DATA),
+                    selection,
+                    selectionArgs,
+                    null
+                )
+                cursor2?.use {
+                    val columnIndex = it.getColumnIndexOrThrow(android.provider.MediaStore.Video.Media.DATA)
+                    if (it.moveToFirst()) {
+                        val path = it.getString(columnIndex)
+                        if (path != null && File(path).exists()) {
+                            android.util.Log.d("OniPlayer", "Got path from _ID query: $path")
+                            return path
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("OniPlayer", "Failed to query by _ID: ${e.message}")
+            }
+        }
+
+        // Method 3: Try using openFileDescriptor to get the actual file path
+        try {
+            contentResolver.openFileDescriptor(uri, "r")?.use { pfd ->
+                val path = getFileDescriptorPath(pfd)
+                if (path != null && File(path).exists()) {
+                    android.util.Log.d("OniPlayer", "Got path from FileDescriptor: $path")
+                    return path
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("OniPlayer", "Failed to get path from FileDescriptor: ${e.message}")
+        }
+
+        // Method 4: Try DocumentsContract API for storage access framework URIs
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+            try {
+                val path = getPathFromDocumentsUri(uri)
+                if (path != null && File(path).exists()) {
+                    android.util.Log.d("OniPlayer", "Got path from DocumentsContract: $path")
+                    return path
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("OniPlayer", "Failed to get path from DocumentsContract: ${e.message}")
+            }
+        }
+
+        android.util.Log.e("OniPlayer", "Could not resolve file path for URI: $uri")
+        return null
+    }
+
+    private fun getFileDescriptorPath(pfd: android.os.ParcelFileDescriptor): String? {
+        // Try to get the path from the file descriptor using reflection
+        return try {
+            val field = android.os.ParcelFileDescriptor::class.java.getDeclaredField("mFd")
+            field.isAccessible = true
+            val fd = field.getInt(pfd) as Int
+            val procFile = File("/proc/self/fd/$fd")
+            if (procFile.exists()) {
+                procFile.canonicalPath
+            } else null
+        } catch (e: Exception) {
+            android.util.Log.w("OniPlayer", "Failed to get path from fd: ${e.message}")
+            null
+        }
+    }
+
+    private fun getPathFromDocumentsUri(uri: Uri): String? {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+            return try {
+                val docId = DocumentsContract.getDocumentId(uri)
+                
+                // Handle different URI patterns
+                when {
+                    // External storage URIs
+                    uri.authority == "com.android.externalstorage.documents" -> {
+                        val parts = docId.split(":")
+                        if (parts.size >= 2) {
+                            val type = parts[0]
+                            val path = parts[1]
+                            if (type == "primary") {
+                                "${Environment.getExternalStorageDirectory()}/$path"
+                            } else {
+                                // Handle secondary storage (SD cards)
+                                "/storage/$type/$path"
+                            }
+                        } else null
+                    }
+                    // Downloads provider URIs
+                    uri.authority == "com.android.providers.downloads.documents" -> {
+                        val id = docId.toLongOrNull()
+                        if (id != null) {
+                            val contentUri = android.net.Uri.parse("content://downloads/public_downloads")
+                            val projection = arrayOf(android.provider.MediaStore.Downloads.DATA)
+                            val cursor = contentResolver.query(
+                                android.net.Uri.withAppendedPath(contentUri, "/$id"),
+                                projection,
+                                null,
+                                null,
+                                null
+                            )
+                            cursor?.use {
+                                val columnIndex = it.getColumnIndexOrThrow(android.provider.MediaStore.Downloads.DATA)
+                                if (it.moveToFirst()) {
+                                    it.getString(columnIndex)
+                                } else null
+                            }
+                        } else null
+                    }
+                    // Media provider URIs
+                    uri.authority == "com.android.providers.media.documents" -> {
+                        val parts = docId.split(":")
+                        if (parts.size >= 2) {
+                            val type = parts[0]
+                            val id = parts[1]
+                            if (type == "video") {
+                                val contentUri = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI
+                                val projection = arrayOf(android.provider.MediaStore.Video.Media.DATA)
+                                val selection = "${android.provider.MediaStore.Video.Media._ID} = ?"
+                                val cursor = contentResolver.query(
+                                    contentUri,
+                                    projection,
+                                    selection,
+                                    arrayOf(id),
+                                    null
+                                )
+                                cursor?.use {
+                                    val columnIndex = it.getColumnIndexOrThrow(android.provider.MediaStore.Video.Media.DATA)
+                                    if (it.moveToFirst()) {
+                                        it.getString(columnIndex)
+                                    } else null
+                                }
+                            } else null
+                        } else null
+                    }
+                    else -> null
+                }
+            } catch (e: Exception) {
+                android.util.Log.w("OniPlayer", "Failed to get path from DocumentsContract: ${e.message}")
+                null
+            }
+        }
+        return null
     }
 
     private fun playVideoFromPath(filePath: String) {
@@ -464,7 +627,25 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(this, "Video not found in library", Toast.LENGTH_LONG).show()
             }
         } else {
-            Toast.makeText(this, "Video not found in library", Toast.LENGTH_LONG).show()
+            // Video not found in library - try to play it directly
+            android.util.Log.d("OniPlayer", "Video not in library, attempting direct playback: $filePath")
+            val videoFile = File(filePath)
+            if (videoFile.exists()) {
+                // Create a temporary VideoItem for direct playback
+                val tempVideo = VideoItem(
+                    id = -1,
+                    title = videoFile.nameWithoutExtension,
+                    path = filePath,
+                    duration = 0L,
+                    size = videoFile.length()
+                )
+                
+                // Play directly without adding to library
+                playVideo(tempVideo)
+            } else {
+                Toast.makeText(this, "Video file not found: $filePath", Toast.LENGTH_LONG).show()
+                android.util.Log.e("OniPlayer", "Video file does not exist: $filePath")
+            }
         }
     }
 
