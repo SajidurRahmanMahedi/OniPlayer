@@ -908,9 +908,8 @@ class VideoFrame(QFrame):
     def on_subtitle_track_changed(self, action):
         track_id = action.data()
         try:
-            success = self.parent.change_subtitle_track(track_id)
-            if success == 0:
-                self.update_subtitle_tracks()
+            self.parent.change_subtitle_track(track_id)
+            self.update_subtitle_tracks()
         except Exception as e:
             print(f"Error changing subtitle track: {e}")
 
@@ -1514,6 +1513,7 @@ class OniPlayer(QMainWindow):
         self.is_muted = False
         self.last_volume = 60
         self.last_subtitle_track = None
+        self.disabled_subtitle_track_backup = None
         
         self.video_frame.setFocus()
 
@@ -1549,32 +1549,39 @@ class OniPlayer(QMainWindow):
             descriptions = self.media_player.video_get_spu_description()
             print(f"[DEBUG] spu_count={spu_count} descriptions={descriptions}")
             if descriptions:
+                available_ids = [track_id for track_id, _ in descriptions]
                 valid_tracks = [
                     (track_id, name)
                     for track_id, name in descriptions
                     if track_id != -1
                 ]
-                if valid_tracks:
-                    if self.last_subtitle_track is not None:
-                        valid_ids = [track_id for track_id, _ in valid_tracks]
-                        if self.last_subtitle_track in valid_ids:
-                            result = self.media_player.video_set_spu(self.last_subtitle_track)
-                            print(f"[DEBUG] Restored subtitle track {self.last_subtitle_track}, result: {result}")
-                    else:
-                        # No prior track - auto-enable the first available subtitle.
+                if self.last_subtitle_track is not None:
+                    if self.last_subtitle_track == -1:
+                        self.media_player.video_set_spu(-1)
+                        print(f"[DEBUG] Restored disabled subtitles (-1)")
+                    elif self.last_subtitle_track in available_ids:
+                        self.media_player.video_set_spu(self.last_subtitle_track)
+                        print(f"[DEBUG] Restored subtitle track {self.last_subtitle_track}")
+                    elif valid_tracks:
                         first_id = valid_tracks[0][0]
-                        result = self.media_player.video_set_spu(first_id)
-                        print(f"[DEBUG] Auto-enabled first subtitle track {first_id}, result: {result}")
-                        if result == 0:
-                            self.last_subtitle_track = first_id
-                            if self.subtitle_delay:
-                                self.media_player.video_set_spu_delay(
-                                    self.subtitle_delay * 1000
-                                )
+                        self.media_player.video_set_spu(first_id)
+                        self.last_subtitle_track = first_id
+                        self.disabled_subtitle_track_backup = first_id
+                else:
+                    if valid_tracks:
+                        first_id = valid_tracks[0][0]
+                        self.media_player.video_set_spu(first_id)
+                        self.last_subtitle_track = first_id
+                        self.disabled_subtitle_track_backup = first_id
+                        print(f"[DEBUG] Auto-enabled first subtitle track {first_id}")
+                        if self.subtitle_delay:
+                            self.media_player.video_set_spu_delay(
+                                self.subtitle_delay * 1000
+                            )
 
-                    self.video_frame.update_subtitle_tracks()
-                    self.video_frame.update_audio_tracks()
-                    return
+                self.video_frame.update_subtitle_tracks()
+                self.video_frame.update_audio_tracks()
+                return
 
             # Subtitle tracks may not have been created yet.
             elapsed = getattr(self, "_subtitle_check_elapsed", 0)
@@ -1592,30 +1599,24 @@ class OniPlayer(QMainWindow):
     def change_subtitle_track(self, track_id):
         try:
             if track_id == -1:
-                success = self.media_player.video_set_spu(-1)
-                print(f"[DEBUG] Disabled subtitles, result: {success}")
+                self.media_player.video_set_spu(-1)
+                self.last_subtitle_track = -1
+                print(f"[DEBUG] Disabled subtitles")
+                self.video_frame.update_subtitle_tracks()
                 return True
             
             spu_count = self.media_player.video_get_spu_count()
             print(f"[DEBUG] Available subtitle tracks: {spu_count}")
             if spu_count > 0:
-                success = self.media_player.video_set_spu(track_id)
+                self.media_player.video_set_spu(track_id)
+                self.last_subtitle_track = track_id
+                self.disabled_subtitle_track_backup = track_id
                 current = self.media_player.video_get_spu()
-                print(f"[DEBUG] set_spu({track_id}) -> {success}, current now = {current}")
+                print(f"[DEBUG] set_spu({track_id}), current now = {current}")
                 
-                # Force subtitle rendering
-                if success == 0:
-                    if track_id != -1:
-                        self.last_subtitle_track = track_id
-                        # Force video update to ensure subtitles render
-                        self.video_frame.update()
-                        # Try to force VLC to re-render the video with subtitles
-                        # by briefly pausing and resuming
-                        was_playing = self.media_player.is_playing()
-                        if was_playing:
-                            self.media_player.pause()
-                            QTimer.singleShot(50, lambda: self.media_player.play())
-                return success
+                self.video_frame.update()
+                self.video_frame.update_subtitle_tracks()
+                return True
             else:
                 print(f"[DEBUG] No subtitle tracks available")
                 return False
@@ -1651,45 +1652,40 @@ class OniPlayer(QMainWindow):
 
             # Currently disabled -> enable last selected or first available.
             if current == -1:
-                track_id = self.last_subtitle_track
+                track_id = getattr(self, 'disabled_subtitle_track_backup', None)
+                if track_id is None:
+                    track_id = self.last_subtitle_track
 
                 valid_ids = [tid for tid, _ in valid_tracks]
 
-                if track_id not in valid_ids:
+                if track_id not in valid_ids or track_id == -1:
                     track_id = valid_tracks[0][0]
 
-                result = self.media_player.video_set_spu(track_id)
+                self.change_subtitle_track(track_id)
 
-                if result == 0:
-                    self.last_subtitle_track = track_id
+                track_name = next(
+                    (
+                        name
+                        for tid, name in valid_tracks
+                        if tid == track_id
+                    ),
+                    "",
+                )
 
-                    track_name = next(
-                        (
-                            name
-                            for tid, name in valid_tracks
-                            if tid == track_id
-                        ),
-                        "",
-                    )
+                if track_name and track_name != str(track_id):
+                    text = f"Subtitles: {track_name}"
+                else:
+                    text = f"Subtitles: Track {track_id}"
 
-                    if track_name and track_name != str(track_id):
-                        text = f"Subtitles: {track_name}"
-                    else:
-                        text = f"Subtitles: Track {track_id}"
-
-                    self.show_title_overlay(text)
-                    self.video_frame.update_subtitle_tracks()
-
+                self.show_title_overlay(text)
                 return
 
             # Currently enabled -> disable.
-            self.last_subtitle_track = current
+            if current != -1:
+                self.disabled_subtitle_track_backup = current
 
-            result = self.media_player.video_set_spu(-1)
-
-            if result == 0:
-                self.show_title_overlay("Subtitles: Disabled")
-                self.video_frame.update_subtitle_tracks()
+            self.change_subtitle_track(-1)
+            self.show_title_overlay("Subtitles: Disabled")
 
         except Exception as e:
             print(f"Error toggling subtitles: {e}")
@@ -1937,6 +1933,8 @@ class OniPlayer(QMainWindow):
                 
             self.update_playlist(filename)
             self.subtitle_delay = 0
+            self.last_subtitle_track = None
+            self.disabled_subtitle_track_backup = None
 
             # Set the X11 window FIRST - before set_media and play()
             # This matches the working example pattern and ensures the
