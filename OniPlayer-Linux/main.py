@@ -1955,7 +1955,8 @@ class OniPlayer(QMainWindow):
             # Hide logo overlay when video is playing
             self.video_frame.logo_overlay.hide()
 
-            self.adjust_window_to_video_size()
+            # Delay window resize to allow VLC to load video metadata
+            QTimer.singleShot(100, self.adjust_window_to_video_size)
 
             QTimer.singleShot(200, self.refresh_cursor)
 
