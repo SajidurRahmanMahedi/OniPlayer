@@ -1955,6 +1955,8 @@ class OniPlayer(QMainWindow):
             # Hide logo overlay when video is playing
             self.video_frame.logo_overlay.hide()
 
+            self.adjust_window_to_video_size()
+
             QTimer.singleShot(200, self.refresh_cursor)
 
             if self.last_position > 0:
@@ -1978,8 +1980,6 @@ class OniPlayer(QMainWindow):
         Subtitle track descriptions may not be available immediately."""
         self._subtitle_check_elapsed = 0
         QTimer.singleShot(200, self.check_subtitle_tracks)
-        # Adjust window size when video starts playing and metadata is available
-        QTimer.singleShot(100, self.adjust_window_to_video_size)
 
 
     def toggle_play(self):
