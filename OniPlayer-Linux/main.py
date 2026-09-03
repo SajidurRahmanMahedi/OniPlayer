@@ -1946,6 +1946,11 @@ class OniPlayer(QMainWindow):
                 return
 
             media = self.instance.media_new(filename)
+            
+            # Parse media to get video dimensions before playing
+            # This ensures video size is available for window sizing on first launch
+            media.parse()
+            
             self.media_player.set_media(media)
             self.media_player.play()  # on_media_playing fires ~500ms later → subtitle tracks loaded
 
